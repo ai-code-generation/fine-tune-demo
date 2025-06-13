@@ -1,0 +1,22 @@
+# Model Configuration
+model_name: "gpt2"  # GPT-2 Small
+output_model_path: "./models/fine_tuned"
+
+# Data Configuration  
+pdf_folder: "./data/pdfs"  # Folder chứa PDF files
+chunk_size: 300
+max_training_examples: 1000
+
+# Training Configuration
+training:
+  epochs: 3
+  batch_size: 2
+  learning_rate: 2e-4
+  gradient_accumulation_steps: 4
+  warmup_steps: 100
+
+# Chat Configuration
+chat:
+  max_length: 150
+  temperature: 0.7
+  top_p: 0.9

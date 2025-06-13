@@ -1,0 +1,67 @@
+## Ứng dụng GPT-2 trong xử lý ngôn ngữ tự nhiên
+
+GPT-2 (Generative Pre-trained Transformer 2) là một mô hình ngôn ngữ được phát triển bởi OpenAI vào năm 2019. Đây là phiên bản tiếp theo của GPT-1, với số lượng tham số lớn hơn và khả năng tạo văn bản thậm chí còn ấn tượng hơn.
+
+### Đặc điểm của GPT-2
+
+GPT-2 có một số phiên bản với kích thước khác nhau:
+- GPT-2 Small: 124 triệu tham số
+- GPT-2 Medium: 355 triệu tham số
+- GPT-2 Large: 774 triệu tham số
+- GPT-2 XL: 1.5 tỷ tham số
+
+GPT-2 Small là phiên bản nhỏ nhất nhưng vẫn đủ mạnh cho nhiều ứng dụng. Nó có thể chạy trên máy tính cá nhân mà không cần phần cứng đặc biệt.
+
+### Ứng dụng của GPT-2
+
+GPT-2 có thể được áp dụng trong nhiều lĩnh vực:
+
+1. **Tạo văn bản**: Viết các bài báo, câu chuyện, thơ, và các hình thức văn bản khác.
+2. **Trả lời câu hỏi**: Trả lời câu hỏi dựa trên kiến thức đã học.
+3. **Tóm tắt văn bản**: Rút gọn văn bản dài thành các đoạn ngắn giữ lại thông tin quan trọng.
+4. **Dịch thuật**: Hỗ trợ dịch giữa các ngôn ngữ.
+5. **Chatbot**: Tạo hội thoại tự nhiên với người dùng.
+
+### Fine-tuning GPT-2
+
+Một trong những ưu điểm lớn nhất của GPT-2 là khả năng fine-tune trên dữ liệu mới. Fine-tuning là quá trình điều chỉnh một mô hình đã được đào tạo trước đó (pre-trained model) trên một tập dữ liệu cụ thể để cải thiện hiệu suất cho một nhiệm vụ cụ thể.
+
+Các bước cơ bản để fine-tune GPT-2:
+
+1. **Chuẩn bị dữ liệu**: Thu thập và tiền xử lý dữ liệu phù hợp với nhiệm vụ.
+2. **Tokenization**: Chuyển đổi text thành tokens mà mô hình có thể hiểu được.
+3. **Training**: Áp dụng kỹ thuật fine-tuning để điều chỉnh mô hình.
+4. **Đánh giá**: Kiểm tra hiệu suất của mô hình đã fine-tune.
+
+### Kỹ thuật LoRA
+
+LoRA (Low-Rank Adaptation) là một phương pháp tinh chỉnh hiệu quả về mặt tham số. Thay vì cập nhật toàn bộ trọng số của mô hình, LoRA chỉ cập nhật một tập nhỏ các tham số thông qua việc thêm các ma trận có hạng thấp (low-rank matrices) vào mô hình gốc.
+
+Ưu điểm của LoRA:
+- Giảm lượng bộ nhớ cần thiết
+- Tăng tốc quá trình đào tạo
+- Giảm nguy cơ quá khớp (overfitting)
+- Cho phép chạy trên phần cứng có giới hạn
+
+### Xử lý tài liệu PDF
+
+Việc trích xuất thông tin từ tài liệu PDF là một nhiệm vụ phổ biến trong xử lý văn bản. Các bước cơ bản bao gồm:
+
+1. **Trích xuất văn bản**: Chuyển đổi PDF thành văn bản thuần túy.
+2. **Tiền xử lý**: Làm sạch văn bản, loại bỏ ký tự đặc biệt, chuẩn hóa định dạng.
+3. **Phân đoạn**: Chia văn bản thành các đoạn nhỏ hơn để xử lý.
+4. **Trích xuất thông tin**: Xác định và trích xuất thông tin quan trọng từ văn bản.
+
+### Xây dựng chatbot từ tài liệu
+
+Xây dựng một chatbot có khả năng trả lời câu hỏi dựa trên tài liệu PDF bao gồm các bước:
+
+1. **Thu thập tài liệu**: Gom tất cả tài liệu PDF liên quan.
+2. **Trích xuất và xử lý văn bản**: Chuyển PDF thành dạng văn bản có cấu trúc.
+3. **Tạo bộ dữ liệu huấn luyện**: Tạo các cặp câu hỏi-trả lời từ nội dung tài liệu.
+4. **Fine-tune mô hình**: Áp dụng LoRA để fine-tune GPT-2 trên bộ dữ liệu này.
+5. **Xây dựng giao diện**: Tạo giao diện tương tác để người dùng có thể đặt câu hỏi.
+
+### Kết luận
+
+GPT-2 Small kết hợp với kỹ thuật LoRA là một giải pháp hiệu quả để tạo các hệ thống chatbot thông minh có khả năng trả lời câu hỏi dựa trên tài liệu cụ thể. Mô hình này đủ nhỏ để chạy trên máy tính cá nhân nhưng vẫn đủ mạnh để cung cấp câu trả lời chất lượng cao.
