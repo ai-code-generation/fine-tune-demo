@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🏆 FPT-Nvidia Hackathon Demo: S32DS AI CodeGen
 
 ## 🎯 Demo Overview
@@ -150,3 +151,183 @@ hackathon-demo/
 - **Demo**: Live coding demonstration
 
 Ready to dive into the detailed planning! 🚀
+=======
+# RAG System with NVIDIA NIM Containers
+
+Enterprise-ready Retrieval Augmented Generation system porting from NVIDIA GenerativeAIExamples with enhanced local deployment capabilities using NVIDIA NIM containers.
+
+## 🎯 **Features**
+
+- **🤖 NVIDIA NIM Integration**: Local deployment with enterprise-grade containers
+- **📚 Advanced RAG Pipeline**: Document ingestion, vector search, and LLM generation
+- **🌐 Web Interface**: React-based RAG Playground for interactive Q&A
+- **🗄️ Vector Database**: Milvus for high-performance vector storage
+- **🔧 Flexible Deployment**: Support both cloud APIs and local NIM containers
+- **🐳 Docker Orchestration**: Complete containerized deployment
+
+## 🏗️ **Architecture**
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  RAG Playground │    │   Chain Server  │    │ Vector Database │
+│ (React/Docker)  │◄──►│ (FastAPI/Docker)│◄──►│ (Milvus/Docker) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │ NVIDIA NIM      │
+                       │ • Llama3-8B     │
+                       │ • E5-V5 Embed   │
+                       │ • GPU Accel     │
+                       │ • Enterprise    │
+                       └─────────────────┘
+```
+
+## 🚀 **Quick Start**
+
+### **Prerequisites**
+- Docker & Docker Compose
+- NVIDIA GPU (for NIM containers)
+- NGC API Key ([Get here](https://ngc.nvidia.com/))
+
+### **Deployment**
+
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/ai-code-generation/fine-tune-demo.git
+   cd fine-tune-demo
+   git checkout porting_GenerativeAIExamples_RAG
+   ```
+
+2. **Setup Environment**
+   ```bash
+   cd basic_rag_system
+   cp .env.example .env
+   # Edit .env with your NGC_API_KEY
+   ```
+
+3. **Deploy with NIM Containers**
+   ```bash
+   cd langchain
+   docker compose --profile local-nim up -d --build
+   ```
+
+4. **Access Application**
+   - Web Interface: http://localhost:8090
+   - API Documentation: http://localhost:8081/docs
+
+## 📁 **Project Structure**
+
+```
+basic_rag_system/
+├── 🎯 langchain/                    # RAG Implementation
+│   ├── chains.py                   # Core RAG logic
+│   ├── docker-compose.yaml         # Service orchestration
+│   └── prompt.yaml                # LLM prompts
+├── 🔌 chain_server/                # Backend API Server
+│   ├── server.py                  # FastAPI endpoints
+│   ├── utils.py                   # Utility functions
+│   └── requirements.txt           # Dependencies
+├── 🌐 rag_playground/              # Frontend Web UI
+│   └── (React application)
+├── 🏭 local_deploy/                # Infrastructure
+│   ├── docker-compose-vectordb.yaml    # Milvus services
+│   └── docker-compose-nim-ms.yaml      # NVIDIA NIM containers
+└── 📖 Documentation files
+```
+
+## 🔧 **Configuration**
+
+### **NIM Container Setup**
+```bash
+# .env configuration
+NGC_API_KEY=your-ngc-api-key-here
+APP_LLM_MODELNAME=meta/llama3-8b-instruct
+APP_EMBEDDINGS_MODELNAME=nvidia/nv-embedqa-e5-v5
+COLLECTION_NAME=rag_collection
+```
+
+### **Model Configuration**
+- **LLM**: Meta Llama3-8B-Instruct (via NIM)
+- **Embedding**: NVIDIA NV-EmbedQA-E5-V5 (via NIM)
+- **Vector DB**: Milvus with L2 similarity
+- **Text Splitter**: SentenceTransformers token-based
+
+## 📚 **Documentation**
+
+- [📋 RAG System Design](RAG_System_Design.md)
+- [🔧 Code Flow Guide](RAG_CODE_FLOW_GUIDE.md)
+- [💼 Enterprise Licensing](ENTERPRISE_LICENSING_ANALYSIS.md)
+- [🔄 Project Comparison](PROJECT_COMPARISON_ANALYSIS.md)
+- [🚀 NIM Setup Guide](basic_rag_system/NIM_SETUP_GUIDE.md)
+
+## 🎯 **Use Cases**
+
+- **📖 Document Q&A**: Upload PDFs, TXT, MD files for interactive questioning
+- **🏢 Enterprise Knowledge Base**: Internal document search and retrieval
+- **🔍 Research Assistant**: Academic paper analysis and summarization
+- **📊 Technical Documentation**: API docs, manuals, and guides processing
+
+## 🛡️ **Enterprise Features**
+
+- **🔒 Local Deployment**: Complete on-premises processing
+- **🚀 GPU Optimization**: NVIDIA NIM container acceleration
+- **📈 Scalable Architecture**: Multi-container orchestration
+- **🔧 Configurable**: Flexible model and parameter settings
+- **📊 Monitoring**: Health checks and observability
+
+## 💰 **Cost Analysis**
+
+### **Free Alternative Stack**
+- **Total Cost**: $0/month
+- **LLM**: Local models (Ollama)
+- **Embedding**: Sentence-transformers
+- **Performance**: Good
+
+### **NVIDIA NIM Stack**
+- **Total Cost**: $5,000-$50,000+/year
+- **LLM**: NVIDIA NIM containers
+- **Embedding**: NVIDIA NIM embedding
+- **Performance**: Excellent
+
+## 🔄 **Migration from NVIDIA Examples**
+
+This project is a direct port of [NVIDIA GenerativeAIExamples](https://github.com/NVIDIA/GenerativeAIExamples/tree/main/RAG) with:
+
+- **✅ 100% Core Logic Preservation**: RAG algorithms unchanged
+- **🆕 Enhanced Deployment**: Added NIM container support
+- **🔧 Simplified Structure**: Easier development and deployment
+- **📚 Comprehensive Documentation**: Detailed guides and analysis
+
+## 🤝 **Contributing**
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+## 📄 **License**
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+Original NVIDIA GenerativeAIExamples code is also under Apache 2.0 license.
+
+## 🙏 **Acknowledgments**
+
+- [NVIDIA GenerativeAIExamples](https://github.com/NVIDIA/GenerativeAIExamples) - Original implementation
+- [LangChain](https://langchain.com/) - RAG framework
+- [Milvus](https://milvus.io/) - Vector database
+- [FastAPI](https://fastapi.tiangolo.com/) - API framework
+
+## 📞 **Support**
+
+For issues and questions:
+- 🐛 [GitHub Issues](https://github.com/ai-code-generation/fine-tune-demo/issues)
+- 📖 [Documentation](RAG_CODE_FLOW_GUIDE.md)
+- 💼 [Enterprise Licensing Guide](ENTERPRISE_LICENSING_ANALYSIS.md)
+
+---
+
+**🎯 Ready for production-grade RAG deployment with NVIDIA NIM containers!**
+>>>>>>> 2c0c044 (porting GenerativeAIExamples RAG)

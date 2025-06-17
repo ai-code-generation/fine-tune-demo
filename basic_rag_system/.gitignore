@@ -1,0 +1,103 @@
+# Gitignore for RAG System
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Node modules (if any frontend components)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files
+data/
+documents/
+uploads/
+*.pdf
+*.docx
+*.txt
+*.md
+!README.md
+!*.example.*
+
+# Vector database files
+vectorstore/
+*.pkl
+*.index
+*.faiss
+
+# Model files and cache
+models/
+*.model
+*.bin
+volumes/
+nim-cache/
+
+# NVIDIA NIM cache
+.cache/nim/
+${MODEL_DIRECTORY}/
+
+# Temp repo folder
+temp_repo/

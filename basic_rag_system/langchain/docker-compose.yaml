@@ -1,0 +1,98 @@
+include:
+  - path:
+    - ../local_deploy/docker-compose-vectordb.yaml
+    - ../local_deploy/docker-compose-nim-ms.yaml
+
+services:
+  chain-server:
+    container_name: chain-server
+    image: chain-server:${TAG:-latest}    build:
+      # Set context to current directory
+      context: ../
+      dockerfile: chain_server/Dockerfile
+      args:
+        # Build args, used to copy relevant directory inside the container relative to GenerativeAIExamples/RAG/examples
+        EXAMPLE_PATH: 'basic_rag/langchain'
+    volumes:
+      - ./prompt.yaml:/prompt.yaml
+    # start the server on port 8081
+    command: --port 8081 --host 0.0.0.0    environment:
+      # Path to example directory relative to GenerativeAIExamples/RAG/examples
+      EXAMPLE_PATH: 'basic_rag/langchain'
+      # URL on which vectorstore is hosted
+      APP_VECTORSTORE_URL: "http://milvus:19530"
+      # Type of vectordb used to store embedding supported type milvus, pgvector
+      APP_VECTORSTORE_NAME: "milvus"
+      
+      # === NVIDIA NIM CONTAINER CONFIGURATION ===
+      # NIM LLM configuration
+      APP_LLM_MODELNAME: ${APP_LLM_MODELNAME:-"meta/llama3-8b-instruct"}
+      APP_LLM_MODELENGINE: ${APP_LLM_MODELENGINE:-"nvidia_ai_endpoints"}
+      APP_LLM_SERVERURL: ${APP_LLM_SERVERURL:-"http://nemollm-inference:8000"}
+      
+      # NIM embedding configuration
+      APP_EMBEDDINGS_MODELNAME: ${APP_EMBEDDINGS_MODELNAME:-"nvidia/nv-embedqa-e5-v5"}
+      APP_EMBEDDINGS_MODELENGINE: ${APP_EMBEDDINGS_MODELENGINE:-"nvidia_ai_endpoints"}
+      APP_EMBEDDINGS_SERVERURL: ${APP_EMBEDDINGS_SERVERURL:-"http://nemollm-embedding:8000"}
+      
+      # NGC API Key for NIM containers
+      NGC_API_KEY: ${NGC_API_KEY}
+      
+      # text splitter model name, it's fetched from huggingface
+      APP_TEXTSPLITTER_MODELNAME: ${APP_TEXTSPLITTER_MODELNAME:-"nvidia/nv-embedqa-e5-v5"}
+      APP_TEXTSPLITTER_CHUNKSIZE: ${APP_TEXTSPLITTER_CHUNKSIZE:-512}
+      APP_TEXTSPLITTER_CHUNKOVERLAP: ${APP_TEXTSPLITTER_CHUNKOVERLAP:-50}
+      
+      # vectorstore collection name to store embeddings 
+      COLLECTION_NAME: ${COLLECTION_NAME:-nim_rag_collection}
+      APP_RETRIEVER_TOPK: ${APP_RETRIEVER_TOPK:-5}
+      APP_RETRIEVER_SCORETHRESHOLD: ${APP_RETRIEVER_SCORETHRESHOLD:-0.25}
+      # observability server url
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      # enable observability in chain server
+      ENABLE_TRACING: false
+      # Log level for server, supported level NOTSET, DEBUG, INFO, WARN, ERROR, CRITICAL
+      LOGLEVEL: ${LOGLEVEL:-INFO}
+    ports:
+    - "8081:8081"
+    expose:
+    - "8081"
+    shm_size: 5gb    depends_on:
+      milvus:
+        condition: service_healthy
+      nemollm-inference:
+        condition: service_healthy
+      nemollm-embedding:
+        condition: service_healthy
+
+  rag-playground:
+    container_name: rag-playground
+    image: rag-playground:${TAG:-latest}    build:
+      # Set context to rag_playground directory
+      context: ../rag_playground/
+      dockerfile: Dockerfile
+      args:
+        # select UI type, supported model default, speech
+        PLAYGROUND_MODE: ${PLAYGROUND_MODE:-default}
+    command: --port 8090
+    environment:
+      # URL or chain server container
+      APP_SERVERURL: http://chain-server
+      APP_SERVERPORT: 8081
+      # model name displayed on UI
+      APP_MODELNAME: ${APP_LLM_MODELNAME:-"meta/llama3-70b-instruct"}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      # enable observability in rag playground
+      ENABLE_TRACING: false
+    ports:
+    - "8090:8090"
+    expose:
+    - "8090"    depends_on:
+    - nemollm-inference
+    - nemollm-embedding
+
+networks:
+  default:
+    name: nvidia-rag
