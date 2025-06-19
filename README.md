@@ -1,152 +1,191 @@
-# 🏆 FPT-Nvidia Hackathon Demo: S32DS AI CodeGen
+# LLM Server - Optimized for Code Models
 
-## 🎯 Demo Overview
+OpenAI-compatible chat completion API server using local HuggingFace models. **Specially optimized for CodeLlama-13B, StarCoder-15B, and DeepSeek-Coder models**.
 
-**Event**: FPT-Nvidia Hackathon  
-**Timeline**: 2 weeks
-**Team Size**: 4 people
-**Demo Scope**: AI-powered SWTBot test generation for S32K144 project creation and build
+## 🎯 Key Optimizations
 
-## 🚀 Demo Objectives
+### **Code Model Support**
+- ✅ **CodeLlama**: Instruction format with `[INST]` tokens
+- ✅ **StarCoder**: Code-focused prompting with `# Solution:` format  
+- ✅ **DeepSeek-Coder**: `### Instruction:` / `### Response:` format
+- ✅ **Auto-detection** of model type for optimal parameters
 
-### **Primary Goal**
-Demonstrate an AI system that automatically generates Maven-based SWTBot test scripts for:
-1. **S32K144 Project Creation** - Complete project setup workflow
-2. **Build Execution** - Automated build process testing
+### **Smart Response Extraction**
+- ✅ **Clean responses** - no prompt echo in output
+- ✅ **Multiple extraction methods** with intelligent fallbacks
+- ✅ **Code-specific post-processing** for better formatting
+- ✅ **Repetition removal** and artifact cleanup
 
-### **Demo Flow (5-7 minutes)**
-```
-1. Input: User describes S32DS workflow in natural language
-   ↓
-2. AI Processing: RAG + Local LLM generates SWTBot code
-   ↓
-3. Output: Complete Maven project with executable tests
-   ↓
-4. Live Demo: Run generated tests against S32DS IDE
-   ↓
-5. Results: Successful S32K144 project creation and build
-```
+### **Performance Optimizations**
+- ✅ **Smart device/dtype detection** - auto float32 for CPU, float16 for GPU
+- ✅ **Model-specific generation parameters** - lower temperature for code models
+- ✅ **Memory optimization** for large models (13B, 15B parameters)
+- ✅ **Longer context** support for code models (4K vs 2K tokens)
 
-## 🎪 Demo Scenario
-
-### **User Input Example**
-```
-"Create a new S32K144 project with LQFP100 package, 
-configure it for ARM Cortex-M4F, and build the project"
-```
-
-### **AI Generated Output**
-- Complete Maven project structure with data-driven tests
-- Generic SWTBot test classes (no SoC-specific code)
-- Parameterized test execution for multiple SoCs
-- SoC configuration data (S32K144, S32K146, S32G274A, etc.)
-- Ready-to-run test suite with JUnit Parameterized
-
-### **Live Demonstration**
-1. Show AI generating S32K144-specific code in real-time using **FPT AI Factory + Nvidia infrastructure**
-2. Execute generated tests against actual S32DS IDE
-3. Verify S32K144 project is created and built successfully
-4. **Highlight Nvidia solutions**: GPU acceleration, TensorRT optimization, NIM services
-
-## 📁 Demo Architecture
+## 📁 Project Structure
 
 ```
-hackathon-demo/
-├── README.md                    # This overview
-├── demo-plan.md                 # Detailed 2-week plan
-├── technical-specs.md           # Technical implementation
-├── presentation/                # Demo presentation materials
-├── sample-outputs/              # Example generated code
-└── setup-guide.md              # Environment setup
+llm-server/
+├── models/                  # Local models directory
+│   └── my-finetuned-model/ # Default model location
+├── app.py                  # FastAPI server
+├── Dockerfile              # Container definition
+├── docker-compose.yaml     # Docker deployment
+├── .env                    # Environment variables
+├── deploy.sh               # Deployment script
+├── run_manual.sh           # Manual development mode
+├── test_manual.sh          # Test script for manual mode
+├── API_DOCUMENTATION.md    # Complete API reference
+├── MANUAL_MODE.md          # Development guide
+└── README.md               # This file
 ```
 
-## 🎯 Success Criteria
+## 🚀 Quick Start
 
-### **Must Have (MVP)**
-- [x] AI generates generic SWTBot code with data-driven testing
-- [x] AI generates SoC configuration data (S32K144, S32K146, S32G274A)
-- [x] Generated parameterized tests run successfully in Maven
-- [x] Live demo works reliably with multiple SoCs
+### 1. Setup Environment
+```bash
+# Copy environment template
+cp .env.example .env
 
-### **Nice to Have**
-- [ ] Web interface for SoC selection and input/output
-- [ ] Real-time code generation visualization
-- [ ] Extended SoC family support (S32K1, S32G, S32V)
-- [ ] Advanced error handling and validation
-
-## 👥 Team Roles (4 People)
-
-### **Person 1: AI/ML Engineer**
-- RAG system implementation
-- Local LLM integration and fine-tuning
-- Training data preparation
-- Code generation pipeline
-
-### **Person 2: S32DS/SWTBot Expert**
-- S32DS workflow analysis
-- SWTBot test implementation
-- S32K144 specific configurations
-- IDE integration testing
-
-### **Person 3: Backend/Integration Developer**
-- Maven project templates
-- System integration
-- API development
-- Testing framework setup
-
-### **Person 4: Frontend/Demo Lead**
-- Demo presentation preparation
-- User interface development
-- Live demo coordination
-- Documentation and presentation
-
-## 📁 Demo Architecture & Documentation Links
-
-```
-hackathon-demo/
-├── README.md                    # This overview
-├── demo-plan.md                 # Detailed 2-week plan
-├── technical-specs.md           # Technical implementation
-├── team-assignments.md          # Individual tasks for 4 people
-├── setup-guide.md              # Environment setup
-├── sample-outputs/              # Example generated code
-│   └── README.md               # Sample test code and outputs
-└── presentation/                # Demo presentation materials (TBD)
+# Edit configuration - all variables are loaded automatically
+nano .env
 ```
 
-### 📋 **Documentation Links**
+### 2. Configure Environment Variables
+Edit the `.env` file with your specific settings. The Docker container will automatically load all variables from this file.
 
-| Document | Description | Link |
-|----------|-------------|------|
-| **Demo Overview** | Main overview, objectives, and team structure | [README.md](./README.md) |
-| **2-Week Plan** | Detailed timeline, milestones, and deliverables | [demo-plan.md](./demo-plan.md) |
-| **Technical Specs** | Architecture, data-driven testing, and implementation | [technical-specs.md](./technical-specs.md) |
-| **Team Assignments** | Individual tasks for 4-person team | [team-assignments.md](./team-assignments.md) |
-| **Setup Guide** | Environment setup and installation instructions | [setup-guide.md](./setup-guide.md) |
-| **Sample Outputs** | Example generated SWTBot code and Maven projects | [sample-outputs/README.md](./sample-outputs/README.md) |
+### 3. Prepare Model
+```bash
+# Option A: Use existing model in models/
+ls models/
 
-### 🎯 **Quick Navigation**
+# Option B: Download new model
+python -c "
+from transformers import AutoModelForCausalLM, AutoTokenizer
+model = AutoModelForCausalLM.from_pretrained('microsoft/DialoGPT-medium')
+tokenizer = AutoTokenizer.from_pretrained('microsoft/DialoGPT-medium')
+model.save_pretrained('./models/my-finetuned-model')
+tokenizer.save_pretrained('./models/my-finetuned-model')
+"
+```
 
-- **🚀 [Start Here: Demo Plan](./demo-plan.md)** - Begin with the 2-week implementation timeline
-- **🔧 [Technical Implementation](./technical-specs.md)** - Data-driven testing architecture
-- **👥 [Team Tasks](./team-assignments.md)** - Individual responsibilities and deliverables
-- **⚙️ [Environment Setup](./setup-guide.md)** - FPT AI Factory, Nvidia, and S32DS configuration
-- **📋 [Sample Code](./sample-outputs/README.md)** - Example parameterized SWTBot tests
+### 4. Deploy with Docker
+```bash
+# Auto-deploy with GPU detection
+./deploy.sh
 
-## 📅 Key Milestones
+# Or manual deployment
+docker-compose up -d --build
+```
 
-- **Week 1**: Core AI system + Basic SWTBot templates
-- **Week 2**: Integration + Demo preparation + Testing
-- **Event Week**: Final polish + Live demonstration
+### 5. Test API
+```bash
+# Health check
+curl http://localhost:8000/v1/health/ready
 
-## 🛠️ Technology Stack
+# Chat completion test
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "local-model",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 50
+  }'
+```
 
-- **AI/ML**: FPT AI Factory infrastructure, **Nvidia NIM** (if available), Local LLM (Ollama/LLaMA), RAG with vector DB
-- **Training Infrastructure**: **FPT AI Factory** for model training and fine-tuning
-- **GPU Acceleration**: **Nvidia CUDA/TensorRT** for inference optimization
-- **Vector Processing**: **Nvidia Rapids** (if applicable) for embeddings
-- **Testing**: SWTBot, JUnit, Maven
-- **IDE**: S32DS (Eclipse-based)
-- **Demo**: Live coding demonstration
+## ⚙️ Configuration (.env)
 
-Ready to dive into the detailed planning! 🚀
+All configuration is managed through environment variables in the `.env` file:
+
+```env
+# Model Configuration (Local models take priority)
+HF_MODEL_LOCAL_PATH=./models/my-finetuned-model
+HF_MODEL_NAME=microsoft/DialoGPT-medium
+
+# HuggingFace Settings  
+TRUST_REMOTE_CODE=false     # Set to true for models requiring custom code
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
+
+# Performance Settings
+DEVICE=auto                 # auto, cpu, cuda
+TORCH_DTYPE=float16         # float16, float32
+LOW_CPU_MEM_USAGE=true      # Optimize memory usage
+
+# Logging
+LOG_LEVEL=INFO              # DEBUG, INFO, WARNING, ERROR
+```
+
+**Note**: All environment variables are loaded from the `.env` file automatically by Docker Compose.
+
+## 🛠️ Development Mode
+
+For development without Docker:
+
+```bash
+# One-time setup
+./setup_dev.sh
+
+# Start development server
+./run_manual.sh
+
+# Test in another terminal
+./test_manual.sh
+```
+
+## 🐳 Docker Operations
+
+```bash
+# Deploy
+./deploy.sh                           # Smart deployment
+
+# Manual operations
+docker-compose up -d --build          # Start services
+docker-compose down                   # Stop services
+docker logs -f llm-server             # View logs
+docker stats llm-server               # Monitor resources
+```
+
+**Environment Configuration**: Docker Compose automatically loads all environment variables from the `.env` file using `env_file` directive. No need to declare variables individually in docker-compose.yaml.
+
+## 📚 API Endpoints
+
+- **Health**: `GET /v1/health/ready`
+- **Models**: `GET /v1/models`  
+- **Chat**: `POST /v1/chat/completions`
+
+## 🔧 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| GPU errors in WSL2 | Deploy script auto-handles CPU fallback |
+| Port 8000 in use | Change `PORT=8001` in `.env` |
+| Model not found | Check `HF_MODEL_LOCAL_PATH` in `.env` |
+| Out of memory | Use `DEVICE=cpu` or smaller model |
+| Permission denied | `chmod -R 755 models/` |
+
+### Debug Commands
+```bash
+# Container status
+docker ps
+
+# Detailed logs  
+docker logs llm-server
+
+# Test connectivity
+curl http://localhost:8000/v1/health/ready
+
+# Resource usage
+docker stats llm-server
+```
+
+## 📖 Additional Documentation
+
+- [API_DOCUMENTATION.md](API_DOCUMENTATION.md) - Complete API reference
+- [MANUAL_MODE.md](MANUAL_MODE.md) - Development without Docker
+
+---
+
+**Quick Deploy**: `./deploy.sh` → Test: `curl localhost:8000/v1/health/ready` → Ready! 🚀
