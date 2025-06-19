@@ -94,7 +94,7 @@ max_attempts=30
 attempt=0
 
 while [ $attempt -lt $max_attempts ]; do
-    if curl -s -f http://localhost:8000/v1/health/ready > /dev/null 2>&1; then
+    if curl -s -f http://localhost:8884/v1/health/ready > /dev/null 2>&1; then
         break
     fi
     
@@ -110,10 +110,10 @@ done
 print_info "LLM server started successfully!"
 echo ""
 print_info "Access points:"
-echo "  - LLM API: http://localhost:8000"
-echo "  - Health: http://localhost:8000/v1/health/ready"
-echo "  - Models: http://localhost:8000/v1/models"
-echo "  - Chat Completions: http://localhost:8000/v1/chat/completions"
+echo "  - LLM API: http://localhost:8884"
+echo "  - Health: http://localhost:8884/v1/health/ready"
+echo "  - Models: http://localhost:8884/v1/models"
+echo "  - Chat Completions: http://localhost:8884/v1/chat/completions"
 
 print_info "Backend: HuggingFace Transformers"
 

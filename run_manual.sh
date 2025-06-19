@@ -35,7 +35,7 @@ Usage: $0 [OPTIONS]
 Run LLM Server manually (without Docker) for quick debugging.
 
 OPTIONS:
-    --port PORT         Server port (default: 8000)
+    --port PORT         Server port (default: 8884)
     --host HOST         Server host (default: 127.0.0.1)
     --device DEVICE     Device: cpu, cuda, auto (default: auto)
     --model-path PATH   Path to local model (default: ./models/my-finetuned-model)
@@ -67,10 +67,10 @@ EOF
 }
 
 # Default values
-PORT=8000
+PORT=8884
 HOST="127.0.0.1"
 DEVICE="auto"
-MODEL_PATH="./models/CodeLlama-7b-Instruct-hf"
+MODEL_PATH="./models/gpt2-large"
 LOG_LEVEL="info"
 RELOAD=false
 INSTALL_DEPS=false

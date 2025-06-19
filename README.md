@@ -81,10 +81,10 @@ docker-compose up -d --build
 ### 5. Test API
 ```bash
 # Health check
-curl http://localhost:8000/v1/health/ready
+curl http://localhost:8884/v1/health/ready
 
 # Chat completion test
-curl -X POST http://localhost:8000/v1/chat/completions \
+curl -X POST http://localhost:8884/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "local-model",
@@ -107,7 +107,7 @@ TRUST_REMOTE_CODE=false     # Set to true for models requiring custom code
 
 # Server Configuration
 HOST=0.0.0.0
-PORT=8000
+PORT=8884
 
 # Performance Settings
 DEVICE=auto                 # auto, cpu, cuda
@@ -161,7 +161,7 @@ docker stats llm-server               # Monitor resources
 | Issue | Solution |
 |-------|----------|
 | GPU errors in WSL2 | Deploy script auto-handles CPU fallback |
-| Port 8000 in use | Change `PORT=8001` in `.env` |
+| Port 8884 in use | Change `PORT=8001` in `.env` |
 | Model not found | Check `HF_MODEL_LOCAL_PATH` in `.env` |
 | Out of memory | Use `DEVICE=cpu` or smaller model |
 | Permission denied | `chmod -R 755 models/` |
@@ -175,7 +175,7 @@ docker ps
 docker logs llm-server
 
 # Test connectivity
-curl http://localhost:8000/v1/health/ready
+curl http://localhost:8884/v1/health/ready
 
 # Resource usage
 docker stats llm-server
@@ -188,4 +188,4 @@ docker stats llm-server
 
 ---
 
-**Quick Deploy**: `./deploy.sh` → Test: `curl localhost:8000/v1/health/ready` → Ready! 🚀
+**Quick Deploy**: `./deploy.sh` → Test: `curl localhost:8884/v1/health/ready` → Ready! 🚀

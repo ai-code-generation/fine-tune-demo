@@ -20,11 +20,11 @@ COPY app.py .
 COPY .env* ./
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8884
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8000/v1/health/ready || exit 1
+  CMD curl -f http://localhost:8884/v1/health/ready || exit 1
 
 # Run the application with proper Python path
 CMD ["python", "-u", "app.py"]

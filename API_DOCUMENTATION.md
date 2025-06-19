@@ -7,7 +7,7 @@ The LLM Server provides OpenAI-compatible chat completion API endpoints using lo
 ## Base URL
 
 ```
-http://localhost:8000
+http://localhost:8884
 ```
 
 ## Authentication
@@ -206,7 +206,7 @@ Currently, no rate limiting is implemented for local deployment.
 
 #### Basic Chat Completion
 ```bash
-curl -X POST http://localhost:8000/v1/chat/completions \
+curl -X POST http://localhost:8884/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "local-model",
@@ -219,7 +219,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 #### Multi-turn Conversation
 ```bash
-curl -X POST http://localhost:8000/v1/chat/completions \
+curl -X POST http://localhost:8884/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "local-model",
@@ -235,7 +235,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 #### Health Check
 ```bash
-curl http://localhost:8000/v1/health/ready
+curl http://localhost:8884/v1/health/ready
 ```
 
 ### Python Examples
@@ -247,7 +247,7 @@ from openai import OpenAI
 # Initialize client pointing to local server
 client = OpenAI(
     api_key="not-needed",
-    base_url="http://localhost:8000/v1"
+    base_url="http://localhost:8884/v1"
 )
 
 # Create chat completion
@@ -267,7 +267,7 @@ print(response.choices[0].message.content)
 ```python
 import requests
 
-url = "http://localhost:8000/v1/chat/completions"
+url = "http://localhost:8884/v1/chat/completions"
 headers = {"Content-Type": "application/json"}
 data = {
     "model": "local-model",
@@ -305,7 +305,7 @@ This API is compatible with:
 1. **Model not loading**: Check `HF_MODEL_LOCAL_PATH` and model file structure
 2. **Out of memory**: Reduce model size or increase available RAM/VRAM
 3. **Slow responses**: Consider using smaller model or GPU acceleration
-4. **Connection refused**: Ensure server is running and port 8000 is accessible
+4. **Connection refused**: Ensure server is running and port 8884 is accessible
 
 ### Debug Endpoints
 

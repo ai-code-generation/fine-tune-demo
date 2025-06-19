@@ -659,7 +659,7 @@ async def root():
 if __name__ == "__main__":
     # Get configuration from environment
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", os.getenv("API_PORT", 8000)))
+    port = int(os.getenv("PORT", os.getenv("API_PORT", 8884)))
     log_level = os.getenv("LOG_LEVEL", "info").lower()
     
     uvicorn.run(
