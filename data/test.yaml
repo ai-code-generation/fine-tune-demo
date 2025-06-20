@@ -1,14 +1,14 @@
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure watchdog timer for S32K144 safety applications?"
+    content: "How do I configure watchdog timer for S32K14_DUC13 safety applications?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureWatchdogForS32K144() {
+      public void testConfigureWatchdogForS32K14_DUC13() {
           // Open S32 Configuration Tool
           bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
@@ -66,9 +66,9 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure low power modes for S32K144 battery applications."
+    content: "Create a test to configure low power modes for S32K14_DUC13 battery applications."
   - role: assistant
     content: |
       ```java
@@ -141,14 +141,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure I2C communication for S32K144 sensor networks?"
+    content: "How do I configure I2C communication for S32K14_DUC13 sensor networks?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureI2CForS32K144() {
+      public void testConfigureI2CForS32K14_DUC13() {
           // Open configuration tool
           bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
@@ -231,9 +231,9 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure timer interrupts for S32K144 real-time applications."
+    content: "Create a test to configure timer interrupts for S32K14_DUC13 real-time applications."
   - role: assistant
     content: |
       ```java

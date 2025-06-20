@@ -1,20 +1,20 @@
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Task: Create and build an S32K144 project in Eclipse IDE using SWTBot automation."
+    content: "Task: Create and build an S32K14_DUC13 project in Eclipse IDE using SWTBot automation."
   - role: assistant
     content: |
       ```java
       @Test
-      public void testCreateS32K144Project() {
+      public void testCreateS32K14_DUC13Project() {
           // Open New Project wizard
           bot.menu("File").menu("New").menu("Project...").click();
           bot.waitUntil(Conditions.shellIsActive("New Project"));
           
-          // Navigate to S32K144 project type
-          bot.tree().expandNode("NXP S32K1xx").select("S32K144 Project");
+          // Navigate to S32K14_DUC13 project type
+          bot.tree().expandNode("NXP S32K1xx").select("S32K14_DUC13 Project");
           bot.button("Next >").click();
           
           // Set project name
@@ -22,7 +22,7 @@ messages:
           bot.button("Next >").click();
           
           // Select processor
-          bot.comboBoxWithLabel("Processor:").setSelection("S32K144");
+          bot.comboBoxWithLabel("Processor:").setSelection("S32K14_DUC13");
           bot.button("Next >").click();
           
           // Configure project settings
@@ -44,14 +44,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure the S32K144 project build settings for automotive applications?"
+    content: "How do I configure the S32K14_DUC13 project build settings for automotive applications?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureS32K144BuildSettings() {
+      public void testConfigureS32K14_DUC13BuildSettings() {
           // Right-click on project and open properties
           bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
           bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
@@ -73,11 +73,11 @@ messages:
           // Configure preprocessor symbols
           bot.tree().select("Preprocessor");
           bot.button("Add...").click();
-          bot.text().setText("S32K144");
+          bot.text().setText("S32K14_DUC13");
           bot.button("OK").click();
           
           bot.button("Add...").click();
-          bot.text().setText("CPU_S32K144HFT0VLLT");
+          bot.text().setText("CPU_S32K14_DUC13HFT0VLLT");
           bot.button("OK").click();
           
           // Configure optimization for automotive
@@ -92,7 +92,7 @@ messages:
           
           // Set linker script
           bot.tree().select("Miscellaneous");
-          bot.textWithLabel("Linker script (-T):").setText("${workspace_loc:/${ProjName}/Project_Settings/Linker_Files/S32K144_64_flash.ld}");
+          bot.textWithLabel("Linker script (-T):").setText("${workspace_loc:/${ProjName}/Project_Settings/Linker_Files/S32K14_DUC13_64_flash.ld}");
           
           bot.button("Apply and Close").click();
       }
@@ -100,14 +100,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to add and configure GPIO driver for S32K144 project."
+    content: "Create a test to add and configure GPIO driver for S32K14_DUC13 project."
   - role: assistant
     content: |
       ```java
       @Test
-      public void testAddGPIODriverToS32K144Project() {
+      public void testAddGPIODriverToS32K14_DUC13Project() {
           // Open project in Project Explorer
           bot.tree().select("S32KDUC1431_Project").doubleClick();
           
@@ -155,14 +155,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure the debugger for S32K144 project using PEMicro interface?"
+    content: "How do I configure the debugger for S32K14_DUC13 project using PEMicro interface?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureS32K144Debugger() {
+      public void testConfigureS32K14_DUC13Debugger() {
           // Right-click on project and open Debug Configurations
           bot.tree().select("S32KDUC1431_Project").contextMenu("Debug As").menu("Debug Configurations...").click();
           bot.waitUntil(Conditions.shellIsActive("Debug Configurations"));
@@ -182,7 +182,7 @@ messages:
           bot.tabItem("Debugger").activate();
           bot.comboBoxWithLabel("Interface:").setSelection("OpenSDA - USB1");
           bot.comboBoxWithLabel("Port:").setSelection("USB1");
-          bot.comboBoxWithLabel("Device:").setSelection("S32K144");
+          bot.comboBoxWithLabel("Device:").setSelection("S32K14_DUC13");
           
           // Set GDB command
           bot.textWithLabel("GDB Command:").setText("${cross_prefix}gdb${cross_suffix}");
@@ -235,14 +235,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure FlexCAN module for S32K144 automotive communication."
+    content: "Create a test to configure FlexCAN module for S32K14_DUC13 automotive communication."
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureFlexCANForS32K144() {
+      public void testConfigureFlexCANForS32K14_DUC13() {
           // Open S32 Configuration Tool
           bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
@@ -297,14 +297,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I add and configure ADC functionality for S32K144 sensor reading?"
+    content: "How do I add and configure ADC functionality for S32K14_DUC13 sensor reading?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureADCForS32K144() {
+      public void testConfigureADCForS32K14_DUC13() {
           // Open project properties for ADC configuration
           bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
           bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
@@ -366,9 +366,9 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure PWM output for motor control in S32K144 project."
+    content: "Create a test to configure PWM output for motor control in S32K14_DUC13 project."
   - role: assistant
     content: |
       ```java
@@ -453,14 +453,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I import an existing S32K144 project and configure it for automotive development?"
+    content: "How do I import an existing S32K14_DUC13 project and configure it for automotive development?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testImportExistingS32K144Project() {
+      public void testImportExistingS32K14_DUC13Project() {
           // Open Import wizard
           bot.menu("File").menu("Import...").click();
           bot.waitUntil(Conditions.shellIsActive("Import"));
@@ -475,11 +475,11 @@ messages:
 
           // Navigate to project directory (assuming it's in a known location)
           bot.shell("Browse For Folder").activate();
-          bot.tree().select("S32K144_Automotive_Project");
+          bot.tree().select("S32K14_DUC13_Automotive_Project");
           bot.button("OK").click();
 
           // Select project to import
-          bot.checkBox("S32K144_Automotive_Project").select();
+          bot.checkBox("S32K14_DUC13_Automotive_Project").select();
           bot.checkBox("Copy projects into workspace").select();
           bot.button("Finish").click();
 
@@ -487,8 +487,8 @@ messages:
           bot.waitUntil(Conditions.treeHasRows(bot.tree(), 1), 10000);
 
           // Configure project for automotive development
-          bot.tree().select("S32K144_Automotive_Project").contextMenu("Properties").click();
-          bot.waitUntil(Conditions.shellIsActive("Properties for S32K144_Automotive_Project"));
+          bot.tree().select("S32K14_DUC13_Automotive_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32K14_DUC13_Automotive_Project"));
 
           // Set automotive-specific compiler flags
           bot.tree().expandNode("C/C++ Build").select("Settings");
@@ -517,7 +517,7 @@ messages:
           bot.button("Apply and Close").click();
 
           // Build imported project
-          bot.tree().select("S32K144_Automotive_Project");
+          bot.tree().select("S32K14_DUC13_Automotive_Project");
           bot.menu("Project").menu("Build Project").click();
 
           // Wait for build completion
@@ -526,18 +526,18 @@ messages:
 
           // Verify project structure
           assertTrue("Project should have SDK folder",
-              bot.tree().expandNode("S32K144_Automotive_Project").getNode("SDK") != null);
+              bot.tree().expandNode("S32K14_DUC13_Automotive_Project").getNode("SDK") != null);
 
           assertTrue("Project should have Sources folder",
-              bot.tree().expandNode("S32K144_Automotive_Project").getNode("Sources") != null);
+              bot.tree().expandNode("S32K14_DUC13_Automotive_Project").getNode("Sources") != null);
       }
       ```
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure memory protection unit (MPU) for S32K144 safety applications."
+    content: "Create a test to configure memory protection unit (MPU) for S32K14_DUC13 safety applications."
   - role: assistant
     content: |
       ```java

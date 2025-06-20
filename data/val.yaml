@@ -1,14 +1,14 @@
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure UART communication for S32K144 project debugging?"
+    content: "How do I configure UART communication for S32K14_DUC13 project debugging?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureUARTForS32K144() {
+      public void testConfigureUARTForS32K14_DUC13() {
           // Open S32 Configuration Tool
           bot.tree().select("S32KDUC1431_Project").contextMenu("Open With").menu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
@@ -53,9 +53,9 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure interrupt handling for S32K144 external signals."
+    content: "Create a test to configure interrupt handling for S32K14_DUC13 external signals."
   - role: assistant
     content: |
       ```java
@@ -120,14 +120,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "How do I configure the system clock for optimal S32K144 performance?"
+    content: "How do I configure the system clock for optimal S32K14_DUC13 performance?"
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureSystemClockS32K144() {
+      public void testConfigureSystemClockS32K14_DUC13() {
           // Open clock configuration tool
           bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
@@ -188,14 +188,14 @@ messages:
 ---
 messages:
   - role: system
-    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
   - role: user
-    content: "Create a test to configure SPI communication for S32K144 sensor interface."
+    content: "Create a test to configure SPI communication for S32K14_DUC13 sensor interface."
   - role: assistant
     content: |
       ```java
       @Test
-      public void testConfigureSPIForS32K144() {
+      public void testConfigureSPIForS32K14_DUC13() {
           // Open peripheral configuration
           bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
           bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
