@@ -1,0 +1,329 @@
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure watchdog timer for S32K144 safety applications?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureWatchdogForS32K144() {
+          // Open S32 Configuration Tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to Safety peripherals
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Safety").select("WDOG");
+          
+          // Enable watchdog
+          bot.checkBox("Enable WDOG").select();
+          
+          // Configure watchdog settings
+          bot.comboBoxWithLabel("Clock Source:").setSelection("LPO_CLK");
+          bot.textWithLabel("Timeout (ms):").setText("1000");
+          bot.checkBox("Enable in Debug Mode").unselect();
+          bot.checkBox("Enable in Stop Mode").select();
+          
+          // Configure window mode
+          bot.checkBox("Enable Window Mode").select();
+          bot.textWithLabel("Window Start (ms):").setText("500");
+          
+          // Generate watchdog configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Add watchdog initialization to main.c
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String wdogCode = "\n    /* Initialize Watchdog */\n" +
+                           "    WDOG_DRV_Init(INST_WATCHDOG1, &watchdog1_Config0);\n" +
+                           "    \n" +
+                           "    while(1) {\n" +
+                           "        /* Application code */\n" +
+                           "        \n" +
+                           "        /* Refresh watchdog */\n" +
+                           "        WDOG_DRV_Trigger(INST_WATCHDOG1);\n" +
+                           "        \n" +
+                           "        /* Delay */\n" +
+                           "        OSIF_TimeDelay(100);\n" +
+                           "    }\n";
+          
+          editor.toTextEditor().selectRange(editor.toTextEditor().getText().indexOf("while(1)"), 
+                                           editor.toTextEditor().getText().indexOf("}") - editor.toTextEditor().getText().indexOf("while(1)") + 1);
+          editor.toTextEditor().insertText(wdogCode);
+          editor.save();
+          
+          // Verify watchdog files
+          assertTrue("Watchdog driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("wdog_driver.c") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure low power modes for S32K144 battery applications."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureLowPowerModes() {
+          // Open power management configuration
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
+          
+          // Navigate to power management
+          bot.tree().expandNode("S32K SDK").select("Power Manager");
+          
+          // Enable power management
+          bot.checkBox("Enable Power Manager").select();
+          
+          // Configure power modes
+          bot.button("Add Power Mode").click();
+          bot.comboBoxWithLabel("Power Mode:").setSelection("VLPR (Very Low Power Run)");
+          bot.textWithLabel("Mode Name:").setText("LowPowerRun");
+          
+          // Add stop mode
+          bot.button("Add Power Mode").click();
+          bot.comboBoxWithLabel("Power Mode:").setSelection("STOP1");
+          bot.textWithLabel("Mode Name:").setText("DeepSleep");
+          
+          // Configure wake-up sources
+          bot.tabItem("Wake-up Sources").activate();
+          bot.checkBox("LPUART1").select();
+          bot.checkBox("LPIT0").select();
+          bot.checkBox("PORTC").select();
+          
+          // Configure clock settings for low power
+          bot.tabItem("Clock Configuration").activate();
+          bot.comboBoxWithLabel("VLPR Clock Source:").setSelection("SIRC");
+          bot.textWithLabel("VLPR Core Frequency (MHz):").setText("2");
+          
+          // Apply power configuration
+          bot.button("Apply and Close").click();
+          
+          // Add power management code to main.c
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String powerCode = "\n    /* Power management initialization */\n" +
+                            "    POWER_SYS_Init(&powerConfigsArr, POWER_MANAGER_CONFIG_CNT, &powerStaticCallbacksConfigsArr, POWER_MANAGER_CALLBACK_CNT);\n" +
+                            "    \n" +
+                            "    /* Configure wake-up interrupt */\n" +
+                            "    INT_SYS_EnableIRQ(PORTC_IRQn);\n" +
+                            "    \n" +
+                            "    while(1) {\n" +
+                            "        /* Normal operation */\n" +
+                            "        \n" +
+                            "        /* Enter low power mode */\n" +
+                            "        POWER_SYS_SetMode(1U, POWER_MANAGER_POLICY_AGREEMENT);\n" +
+                            "        \n" +
+                            "        /* Wait for wake-up */\n" +
+                            "        __WFI();\n" +
+                            "    }\n";
+          
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), powerCode);
+          editor.save();
+          
+          // Build and verify
+          bot.tree().select("S32KDUC1431_Project");
+          bot.menu("Project").menu("Build Project").click();
+          bot.waitUntil(Conditions.shellIsActive("Build Progress"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Build Progress")), 30000);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure I2C communication for S32K144 sensor networks?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureI2CForS32K144() {
+          // Open configuration tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to I2C configuration
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Communication").select("LPI2C0");
+          
+          // Enable I2C
+          bot.checkBox("Enable LPI2C0").select();
+          
+          // Configure I2C as master
+          bot.comboBoxWithLabel("Mode:").setSelection("Master");
+          bot.textWithLabel("Baud Rate (Hz):").setText("100000");
+          bot.comboBoxWithLabel("Operating Mode:").setSelection("Standard Mode");
+          
+          // Configure timing parameters
+          bot.textWithLabel("Setup Time (ns):").setText("250");
+          bot.textWithLabel("Hold Time (ns):").setText("300");
+          bot.textWithLabel("High Period (ns):").setText("4000");
+          bot.textWithLabel("Low Period (ns):").setText("4700");
+          
+          // Configure pins
+          bot.tabItem("Pins").activate();
+          bot.tree().expandNode("LPI2C0").select("LPI2C0_SCL");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTA2");
+          bot.checkBox("Enable Pull-up").select();
+          
+          bot.tree().select("LPI2C0_SDA");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTA3");
+          bot.checkBox("Enable Pull-up").select();
+          
+          // Configure slave addresses
+          bot.tabItem("Slave Addresses").activate();
+          bot.button("Add Slave").click();
+          bot.textWithLabel("Slave Address:").setText("0x48");
+          bot.textWithLabel("Description:").setText("Temperature Sensor");
+          
+          bot.button("Add Slave").click();
+          bot.textWithLabel("Slave Address:").setText("0x68");
+          bot.textWithLabel("Description:").setText("RTC Module");
+          
+          // Generate I2C configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Add I2C communication code
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String i2cCode = "\n    /* I2C communication setup */\n" +
+                          "    uint8_t txBuffer[2] = {0x00, 0x01};\n" +
+                          "    uint8_t rxBuffer[2] = {0};\n" +
+                          "    \n" +
+                          "    /* Initialize I2C */\n" +
+                          "    LPI2C_DRV_MasterInit(INST_LPI2C0, &lpi2c0_MasterConfig0, &lpi2c0MasterState);\n" +
+                          "    \n" +
+                          "    while(1) {\n" +
+                          "        /* Read temperature sensor */\n" +
+                          "        LPI2C_DRV_MasterSendDataBlocking(INST_LPI2C0, txBuffer, 1, true, 1000);\n" +
+                          "        LPI2C_DRV_MasterReceiveDataBlocking(INST_LPI2C0, rxBuffer, 2, true, 1000);\n" +
+                          "        \n" +
+                          "        /* Process sensor data */\n" +
+                          "        uint16_t temperature = (rxBuffer[0] << 8) | rxBuffer[1];\n" +
+                          "        \n" +
+                          "        /* Delay before next reading */\n" +
+                          "        OSIF_TimeDelay(1000);\n" +
+                          "    }\n";
+          
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), i2cCode);
+          editor.save();
+          
+          // Verify I2C files
+          assertTrue("LPI2C driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("lpi2c_driver.c") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure timer interrupts for S32K144 real-time applications."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureTimerInterrupts() {
+          // Open timer configuration
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to timer peripherals
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Timers").select("LPIT0");
+          
+          // Enable LPIT0
+          bot.checkBox("Enable LPIT0").select();
+          
+          // Configure timer channel 0
+          bot.tabItem("Channels").activate();
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("Channel 0");
+          bot.comboBoxWithLabel("Mode:").setSelection("Periodic Timer");
+          bot.textWithLabel("Period (us):").setText("1000");
+          bot.checkBox("Enable Interrupt").select();
+          
+          // Configure timer channel 1 for different frequency
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("Channel 1");
+          bot.comboBoxWithLabel("Mode:").setSelection("Periodic Timer");
+          bot.textWithLabel("Period (us):").setText("10000");
+          bot.checkBox("Enable Interrupt").select();
+          
+          // Configure interrupt priorities
+          bot.tabItem("Interrupts").activate();
+          bot.tree().select("LPIT0_Ch0").textWithLabel("Priority:").setText("1");
+          bot.tree().select("LPIT0_Ch1").textWithLabel("Priority:").setText("2");
+          
+          // Generate timer configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Add timer interrupt handlers
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String timerCode = "\n/* Timer interrupt handlers */\n" +
+                            "volatile uint32_t timer0_counter = 0;\n" +
+                            "volatile uint32_t timer1_counter = 0;\n" +
+                            "\n" +
+                            "void LPIT0_Ch0_IRQHandler(void)\n" +
+                            "{\n" +
+                            "    /* Clear interrupt flag */\n" +
+                            "    LPIT_DRV_ClearInterruptFlagTimerChannels(INST_LPIT0, (1 << 0));\n" +
+                            "    \n" +
+                            "    /* Increment counter */\n" +
+                            "    timer0_counter++;\n" +
+                            "    \n" +
+                            "    /* Toggle LED every 1ms */\n" +
+                            "    if(timer0_counter % 1000 == 0) {\n" +
+                            "        PINS_DRV_TogglePins(PTD, (1 << 15));\n" +
+                            "    }\n" +
+                            "}\n" +
+                            "\n" +
+                            "void LPIT0_Ch1_IRQHandler(void)\n" +
+                            "{\n" +
+                            "    /* Clear interrupt flag */\n" +
+                            "    LPIT_DRV_ClearInterruptFlagTimerChannels(INST_LPIT0, (1 << 1));\n" +
+                            "    \n" +
+                            "    /* Increment counter */\n" +
+                            "    timer1_counter++;\n" +
+                            "    \n" +
+                            "    /* Perform periodic task every 10ms */\n" +
+                            "    /* Add your periodic code here */\n" +
+                            "}\n\n";
+          
+          editor.toTextEditor().insertText(0, timerCode);
+          
+          // Add timer initialization in main function
+          String initCode = "\n    /* Initialize LPIT */\n" +
+                           "    LPIT_DRV_Init(INST_LPIT0, &lpit0_InitConfig);\n" +
+                           "    \n" +
+                           "    /* Start timer channels */\n" +
+                           "    LPIT_DRV_StartTimerChannels(INST_LPIT0, (1 << 0) | (1 << 1));\n";
+          
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), initCode);
+          editor.save();
+          
+          // Verify timer files
+          assertTrue("LPIT driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("lpit_driver.c") != null);
+      }
+      ```

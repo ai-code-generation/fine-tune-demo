@@ -1,0 +1,267 @@
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure UART communication for S32K144 project debugging?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureUARTForS32K144() {
+          // Open S32 Configuration Tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Open With").menu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to Peripherals
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Communication").select("LPUART1");
+          
+          // Enable LPUART1
+          bot.checkBox("Enable LPUART1").select();
+          
+          // Configure UART settings
+          bot.comboBoxWithLabel("Baud Rate:").setSelection("115200");
+          bot.comboBoxWithLabel("Data Bits:").setSelection("8");
+          bot.comboBoxWithLabel("Parity:").setSelection("None");
+          bot.comboBoxWithLabel("Stop Bits:").setSelection("1");
+          
+          // Configure pins
+          bot.tabItem("Pins").activate();
+          bot.tree().expandNode("LPUART1").select("LPUART1_TX");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTC6");
+          
+          bot.tree().select("LPUART1_RX");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTC7");
+          
+          // Enable interrupts
+          bot.tabItem("Interrupts").activate();
+          bot.checkBox("Enable RX Interrupt").select();
+          bot.textWithLabel("Priority:").setText("3");
+          
+          // Generate configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Verify UART driver files
+          assertTrue("LPUART driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("lpuart_driver.c") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure interrupt handling for S32K144 external signals."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureExternalInterrupts() {
+          // Open project configuration
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
+          
+          // Navigate to interrupt configuration
+          bot.tree().expandNode("S32K SDK").select("Interrupt Manager");
+          
+          // Enable external interrupt
+          bot.checkBox("Enable PORT Interrupts").select();
+          
+          // Configure PORTC interrupt
+          bot.button("Add Interrupt").click();
+          bot.comboBoxWithLabel("Interrupt Source:").setSelection("PORTC");
+          bot.textWithLabel("Priority:").setText("2");
+          bot.checkBox("Enable").select();
+          
+          // Configure specific pin interrupt
+          bot.tabItem("Pin Configuration").activate();
+          bot.tree().select("PORTC").expandNode("PORTC").select("PTC12");
+          
+          // Set pin as input with interrupt
+          bot.comboBoxWithLabel("Direction:").setSelection("Input");
+          bot.comboBoxWithLabel("Interrupt:").setSelection("Rising Edge");
+          bot.checkBox("Enable Pull-up").select();
+          
+          // Apply configuration
+          bot.button("Apply and Close").click();
+          
+          // Add interrupt handler to main.c
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String interruptCode = "\n/* External interrupt handler */\n" +
+                                "void PORTC_IRQHandler(void)\n" +
+                                "{\n" +
+                                "    /* Check if PTC12 triggered interrupt */\n" +
+                                "    if(PINS_DRV_GetPortIntFlag(PORTC) & (1 << 12))\n" +
+                                "    {\n" +
+                                "        /* Clear interrupt flag */\n" +
+                                "        PINS_DRV_ClearPinIntFlagCmd(PORTC, 12);\n" +
+                                "        \n" +
+                                "        /* Handle interrupt - toggle LED */\n" +
+                                "        PINS_DRV_TogglePins(PTD, (1 << 15));\n" +
+                                "    }\n" +
+                                "}\n\n";
+          
+          editor.toTextEditor().insertText(0, interruptCode);
+          editor.save();
+          
+          // Build and verify
+          bot.tree().select("S32KDUC1431_Project");
+          bot.menu("Project").menu("Build Project").click();
+          bot.waitUntil(Conditions.shellIsActive("Build Progress"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Build Progress")), 30000);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure the system clock for optimal S32K144 performance?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureSystemClockS32K144() {
+          // Open clock configuration tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to Clocks tab
+          bot.tabItem("Clocks").activate();
+          
+          // Configure SOSC (System Oscillator)
+          bot.tree().expandNode("Clock Sources").select("SOSC");
+          bot.checkBox("Enable SOSC").select();
+          bot.textWithLabel("External Crystal Frequency (MHz):").setText("8");
+          bot.comboBoxWithLabel("Gain:").setSelection("High Gain");
+          
+          // Configure SPLL (System PLL)
+          bot.tree().select("SPLL");
+          bot.checkBox("Enable SPLL").select();
+          bot.comboBoxWithLabel("Reference Clock:").setSelection("SOSC");
+          bot.textWithLabel("VCO Frequency (MHz):").setText("160");
+          bot.textWithLabel("Output Frequency (MHz):").setText("80");
+          
+          // Configure system clock
+          bot.tree().expandNode("System Clocks").select("Core Clock");
+          bot.comboBoxWithLabel("Source:").setSelection("SPLL_CLK");
+          bot.comboBoxWithLabel("Divider:").setSelection("1");
+          
+          // Configure bus clock
+          bot.tree().select("Bus Clock");
+          bot.comboBoxWithLabel("Source:").setSelection("Core Clock");
+          bot.comboBoxWithLabel("Divider:").setSelection("2");
+          
+          // Configure flash clock
+          bot.tree().select("Flash Clock");
+          bot.comboBoxWithLabel("Source:").setSelection("Core Clock");
+          bot.comboBoxWithLabel("Divider:").setSelection("3");
+          
+          // Verify clock tree
+          bot.button("Validate Clock Tree").click();
+          bot.waitUntil(Conditions.shellIsActive("Clock Validation"));
+          
+          // Check for warnings or errors
+          SWTBotText validationResult = bot.textWithLabel("Validation Result:");
+          assertTrue("Clock configuration should be valid", 
+              validationResult.getText().contains("Valid"));
+          
+          bot.button("OK").click();
+          
+          // Generate clock configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Verify clock configuration files
+          assertTrue("Clock configuration should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("clock_config.c") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K144 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure SPI communication for S32K144 sensor interface."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureSPIForS32K144() {
+          // Open peripheral configuration
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+          
+          // Navigate to peripherals
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Communication").select("LPSPI0");
+          
+          // Enable LPSPI0
+          bot.checkBox("Enable LPSPI0").select();
+          
+          // Configure SPI as master
+          bot.comboBoxWithLabel("Mode:").setSelection("Master");
+          bot.textWithLabel("Baud Rate (Hz):").setText("1000000");
+          bot.comboBoxWithLabel("Clock Polarity:").setSelection("Active High");
+          bot.comboBoxWithLabel("Clock Phase:").setSelection("Capture on Leading Edge");
+          bot.comboBoxWithLabel("Bit Order:").setSelection("MSB First");
+          
+          // Configure data frame
+          bot.textWithLabel("Frame Size (bits):").setText("8");
+          bot.comboBoxWithLabel("CS Polarity:").setSelection("Active Low");
+          
+          // Configure pins
+          bot.tabItem("Pins").activate();
+          bot.tree().expandNode("LPSPI0").select("LPSPI0_SCK");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTB2");
+          
+          bot.tree().select("LPSPI0_SIN");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTB3");
+          
+          bot.tree().select("LPSPI0_SOUT");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTB4");
+          
+          bot.tree().select("LPSPI0_PCS0");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTB5");
+          
+          // Configure DMA (optional)
+          bot.tabItem("DMA").activate();
+          bot.checkBox("Enable TX DMA").select();
+          bot.checkBox("Enable RX DMA").select();
+          
+          // Generate SPI configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+          
+          // Add SPI test code to main.c
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String spiCode = "\n    /* SPI communication test */\n" +
+                          "    uint8_t txBuffer[4] = {0xAA, 0xBB, 0xCC, 0xDD};\n" +
+                          "    uint8_t rxBuffer[4] = {0};\n" +
+                          "    \n" +
+                          "    /* Initialize SPI */\n" +
+                          "    LPSPI_DRV_MasterInit(INST_LPSPI0, &lpspi0State, &lpspi0_MasterConfig0);\n" +
+                          "    \n" +
+                          "    /* Perform SPI transfer */\n" +
+                          "    LPSPI_DRV_MasterTransferBlocking(INST_LPSPI0, txBuffer, rxBuffer, 4, 1000);\n";
+          
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), spiCode);
+          editor.save();
+          
+          // Verify SPI files generated
+          assertTrue("LPSPI driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("lpspi_driver.c") != null);
+      }
+      ```
