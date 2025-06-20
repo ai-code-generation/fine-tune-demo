@@ -1,0 +1,157 @@
+# Production Docker Compose configuration
+# Optimized for production fine-tuning workloads
+
+version: '3.8'
+
+services:
+  nemo-finetune-prod:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        - CUDA_VERSION=11.8
+        - PYTHON_VERSION=3.10
+    image: nemo-finetune-pipeline:prod
+    container_name: nemo-finetune-production
+    
+    # GPU support with specific device allocation
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          memory: 64G
+        reservations:
+          memory: 32G
+    
+    # Production environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/workspace/src
+      - NEMO_CACHE_DIR=/workspace/.cache/nemo
+      - HF_HOME=/workspace/.cache/huggingface
+      - WANDB_CACHE_DIR=/workspace/.cache/wandb
+      - WANDB_PROJECT=nemo-s32k144-production
+      - WANDB_RUN_GROUP=production-runs
+      - TOKENIZERS_PARALLELISM=false
+      - OMP_NUM_THREADS=8
+      - CUDA_LAUNCH_BLOCKING=0
+      - NCCL_DEBUG=INFO
+      - NCCL_TREE_THRESHOLD=0
+    
+    # Production volume mounts
+    volumes:
+      # Training data (read-only)
+      - ../data:/workspace/data:ro
+      
+      # Production outputs with specific paths
+      - /data/nemo-outputs/checkpoints:/workspace/checkpoints
+      - /data/nemo-outputs/logs:/workspace/logs
+      - /data/nemo-outputs/deploy:/workspace/deploy
+      - /data/nemo-outputs/cache:/workspace/.cache
+      
+      # Configuration (read-only)
+      - ../configs:/workspace/configs:ro
+      
+      # Shared storage for multi-node (if needed)
+      # - /shared/nfs/nemo:/workspace/shared
+    
+    # Working directory
+    working_dir: /workspace
+    
+    # Production restart policy
+    restart: unless-stopped
+    
+    # Network configuration
+    network_mode: bridge
+    
+    # No exposed ports for production (access via docker exec)
+    # ports: []
+    
+    # Health check for production monitoring
+    healthcheck:
+      test: ["CMD", "python", "-c", "import torch; import nemo; exit(0 if torch.cuda.is_available() else 1)"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 120s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Resource limits
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+    
+    # IPC mode for multi-GPU
+    ipc: host
+    
+    # Command for production training
+    command: >
+      python scripts/run_pipeline.py
+        --model-type llama2
+        --model-size 7b
+        --train-file data/train.yaml
+        --val-file data/val.yaml
+        --test-file data/test.yaml
+        --max-epochs 10
+        --gpus 1
+        --output-dir checkpoints/production
+
+  # Production monitoring services
+  monitoring:
+    image: prom/prometheus:latest
+    container_name: nemo-monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    depends_on:
+      - nemo-finetune-prod
+
+  # Log aggregation
+  log-aggregator:
+    image: fluent/fluent-bit:latest
+    container_name: nemo-logs
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./monitoring/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    depends_on:
+      - nemo-finetune-prod
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

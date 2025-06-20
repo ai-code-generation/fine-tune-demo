@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  nemo-finetune:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nemo-finetune-pipeline:latest
+    container_name: nemo-finetune-container
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Environment variables
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=all
+      - PYTHONPATH=/workspace/src
+      - NEMO_CACHE_DIR=/workspace/.cache/nemo
+      - HF_HOME=/workspace/.cache/huggingface
+      - WANDB_CACHE_DIR=/workspace/.cache/wandb
+      - WANDB_PROJECT=nemo-s32k144-finetune
+      - TOKENIZERS_PARALLELISM=false
+    
+    # Volume mounts for persistent data
+    volumes:
+      # Mount training data (read-only)
+      - ./data:/workspace/data:ro
+      
+      # Mount output directories (read-write)
+      - ./outputs/checkpoints:/workspace/checkpoints
+      - ./outputs/logs:/workspace/logs
+      - ./outputs/deploy:/workspace/deploy
+      - ./outputs/cache:/workspace/.cache
+      
+      # Mount configs (read-only)
+      - ./configs:/workspace/configs:ro
+      
+      # Optional: Mount custom scripts
+      - ./scripts:/workspace/scripts:ro
+      - ./examples:/workspace/examples:ro
+    
+    # Working directory
+    working_dir: /workspace
+    
+    # Keep container running
+    tty: true
+    stdin_open: true
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Network mode
+    network_mode: bridge
+    
+    # Ports for development
+    ports:
+      - "8888:8888"  # Jupyter
+      - "6006:6006"  # TensorBoard
+      - "8080:8080"  # Custom web interface (if needed)
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 32G
+        reservations:
+          memory: 16G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import torch; exit(0 if torch.cuda.is_available() else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: TensorBoard service
+  tensorboard:
+    image: tensorflow/tensorflow:latest-gpu
+    container_name: tensorboard-container
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    volumes:
+      - ./outputs/logs:/logs:ro
+    ports:
+      - "6007:6006"
+    depends_on:
+      - nemo-finetune
+    restart: unless-stopped
+
+  # Optional: Jupyter service
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nemo-finetune-pipeline:latest
+    container_name: jupyter-container
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    volumes:
+      - ./data:/workspace/data:ro
+      - ./outputs:/workspace/outputs
+      - ./configs:/workspace/configs:ro
+      - ./notebooks:/workspace/notebooks
+    ports:
+      - "8889:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - PYTHONPATH=/workspace/src
+    depends_on:
+      - nemo-finetune
+    restart: unless-stopped

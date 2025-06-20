@@ -44,7 +44,24 @@ fine-tune-pipeline/
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### Option 1: Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/ai-code-generation/fine-tune-demo.git
+cd fine-tune-demo
+git checkout pipeline-fine-tune
+
+# Setup Docker environment (one-time setup)
+chmod +x scripts/setup_docker_environment.sh
+./scripts/setup_docker_environment.sh
+
+# Run fine-tuning in Docker with persistent outputs
+chmod +x scripts/docker_run.sh
+./scripts/docker_run.sh run
+```
+
+### Option 2: Local Installation
 
 ```bash
 # Clone the repository
@@ -85,6 +102,25 @@ messages:
 
 ### 3. Run the Pipeline
 
+#### Docker (Recommended)
+```bash
+# Basic S32K144 fine-tuning (outputs saved to ./outputs/)
+./scripts/docker_run.sh run
+
+# Advanced training with custom parameters
+./scripts/docker_run.sh --model-type llama3 --model-size 8b --epochs 5 --gpus 2 run
+
+# Monitor training progress
+./scripts/docker_run.sh logs
+
+# Access Jupyter Lab for analysis
+./scripts/docker_run.sh jupyter  # http://localhost:8888
+
+# View TensorBoard
+./scripts/docker_run.sh tensorboard  # http://localhost:6006
+```
+
+#### Local Installation
 ```bash
 # Basic training
 python scripts/run_pipeline.py \
@@ -139,18 +175,78 @@ config_manager.optimize_for_hardware(gpu_memory_gb=24, num_gpus=2)
 
 ## 🚀 Deployment
 
-Automatic model deployment with multiple format support:
+### Docker Deployment (Persistent Outputs)
+
+With Docker, all outputs are automatically saved to your host machine:
+
+```bash
+# After training, find your models in:
+ls outputs/checkpoints/    # Model checkpoints (.nemo files)
+ls outputs/deploy/         # Deployed models with inference scripts
+ls outputs/logs/           # Training logs and TensorBoard data
+
+# Models include:
+# - model.nemo (trained model)
+# - tokenizer/ (tokenizer files)
+# - config.yaml (model configuration)
+# - inference.py (ready-to-use inference script)
+# - README.md (usage instructions)
+```
+
+### Local Deployment
 
 ```bash
 # Models are automatically deployed to deploy/ folder
 # Includes: model files, tokenizer, configs, README, inference scripts
 ```
 
-Supported formats:
+### Supported Formats
 - NeMo (.nemo)
 - HuggingFace (PyTorch)
 - ONNX (optimized inference)
 - Quantized models (INT8, FP16)
+
+## 🐳 Docker Support
+
+The pipeline includes comprehensive Docker support for easy deployment and reproducible training:
+
+### Features
+- **GPU Support**: NVIDIA Docker runtime with CUDA 11.8
+- **Persistent Outputs**: All models and logs saved to host machine
+- **Multi-Service**: Integrated Jupyter Lab and TensorBoard
+- **Production Ready**: Optimized for both development and production use
+
+### Quick Commands
+```bash
+# Setup (one-time)
+./scripts/setup_docker_environment.sh
+
+# Build and run
+./scripts/docker_run.sh run
+
+# Monitor training
+./scripts/docker_run.sh logs
+
+# Development tools
+./scripts/docker_run.sh jupyter     # Jupyter Lab
+./scripts/docker_run.sh tensorboard # TensorBoard
+./scripts/docker_run.sh shell       # Interactive shell
+
+# Management
+./scripts/docker_run.sh stop        # Stop containers
+./scripts/docker_run.sh clean       # Clean up
+```
+
+### Output Structure
+```
+outputs/
+├── checkpoints/    # Model checkpoints (.nemo files)
+├── logs/          # Training logs and TensorBoard data
+├── deploy/        # Deployed models with inference scripts
+└── cache/         # Model cache (HuggingFace, NeMo, etc.)
+```
+
+For detailed Docker documentation, see [`docker/README.md`](docker/README.md).
 
 ## 📚 Examples
 
