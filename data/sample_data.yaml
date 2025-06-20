@@ -1,0 +1,133 @@
+---
+messages:
+  - role: system
+    content: |
+      You are an expert test automation assistant using SWTBot.
+  - role: user
+    content: |
+      Task: Create and build an S32K144 project in Eclipse IDE using SWTBot automation.
+  - role: assistant
+    content: |
+      ```java
+      bot.menu("File").menu("New").menu("Project...").click();
+      bot.shell("New Project").activate();
+      bot.tree().expandNode("C/C++").select("C Project");
+      bot.button("Next >").click();
+      
+      bot.textWithLabel("Project name:").setText("S32K144_Project");
+      bot.comboBoxWithLabel("Project type:").setSelection("Executable");
+      bot.button("Next >").click();
+      
+      bot.comboBoxWithLabel("Toolchain:").setSelection("Cross GCC");
+      bot.button("Finish").click();
+      
+      // Build the project
+      bot.tree().select("S32K144_Project");
+      bot.menu("Project").menu("Build Project").click();
+      ```
+---
+messages:
+  - role: system
+    content: |
+      You are an expert test automation assistant using SWTBot.
+  - role: user
+    content: |
+      How do I configure build settings for an embedded project?
+  - role: assistant
+    content: |
+      ```java
+      // Right-click on project and open properties
+      bot.tree().select("S32K144_Project").contextMenu("Properties").click();
+      bot.shell("Properties for S32K144_Project").activate();
+      
+      // Navigate to C/C++ Build settings
+      bot.tree().expandNode("C/C++ Build").select("Settings");
+      
+      // Configure compiler settings
+      bot.tree().expandNode("Cross GCC Compiler").select("Includes");
+      bot.button("Add...").click();
+      bot.text().setText("/path/to/includes");
+      bot.button("OK").click();
+      
+      // Configure linker settings
+      bot.tree().expandNode("Cross GCC Linker").select("Libraries");
+      bot.button("Add...").click();
+      bot.text().setText("m");
+      bot.button("OK").click();
+      
+      bot.button("Apply and Close").click();
+      ```
+---
+messages:
+  - role: system
+    content: |
+      You are an expert test automation assistant using SWTBot.
+  - role: user
+    content: |
+      Create a test to verify that a file is created in the project.
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testFileCreation() {
+          // Create a new file
+          bot.tree().select("S32K144_Project").contextMenu("New").menu("File").click();
+          bot.shell("New File").activate();
+          
+          bot.textWithLabel("File name:").setText("main.c");
+          bot.button("Finish").click();
+          
+          // Verify file exists in project tree
+          SWTBotTreeItem projectNode = bot.tree().getTreeItem("S32K144_Project");
+          projectNode.expand();
+          
+          boolean fileExists = false;
+          for (SWTBotTreeItem item : projectNode.getItems()) {
+              if ("main.c".equals(item.getText())) {
+                  fileExists = true;
+                  break;
+              }
+          }
+          
+          assertTrue("File main.c should exist in project", fileExists);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: |
+      You are an expert test automation assistant using SWTBot.
+  - role: user
+    content: |
+      How do I handle dialog boxes and wait for operations to complete?
+  - role: assistant
+    content: |
+      ```java
+      // Wait for dialog to appear
+      bot.waitUntil(Conditions.shellIsActive("Build Progress"));
+      
+      // Handle progress dialog
+      SWTBotShell progressShell = bot.shell("Build Progress");
+      
+      // Wait for operation to complete (dialog to close)
+      bot.waitUntil(Conditions.shellCloses(progressShell), 30000); // 30 second timeout
+      
+      // Alternative: Wait for specific widget state
+      bot.waitUntil(new ICondition() {
+          @Override
+          public boolean test() throws Exception {
+              return bot.button("Finish").isEnabled();
+          }
+          
+          @Override
+          public void init(SWTBot bot) {}
+          
+          @Override
+          public String getFailureMessage() {
+              return "Finish button did not become enabled";
+          }
+      }, 10000);
+      
+      // Wait for tree item to appear
+      bot.waitUntil(Conditions.treeHasRows(bot.tree(), 1));
+      ```

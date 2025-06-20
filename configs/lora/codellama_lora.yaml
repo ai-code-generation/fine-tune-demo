@@ -1,0 +1,87 @@
+# LoRA Configuration for CodeLlama Models
+
+lora:
+  # Basic LoRA settings
+  enabled: true
+  peft_scheme: "lora"
+  
+  # LoRA hyperparameters optimized for CodeLlama
+  adapter_dim: 16  # Lower rank for code specialization
+  adapter_dropout: 0.05  # Low dropout for precise code generation
+  alpha_scaling: 32  # alpha = 2 * rank
+  
+  # Target modules for CodeLlama architecture
+  target_modules:
+    - "attention_qkv"    # Query, Key, Value projections
+    - "attention_dense"  # Output projection
+    - "mlp_fc1"         # First MLP layer
+    - "mlp_fc2"         # Second MLP layer
+  
+  # Initialization methods
+  column_init_method: "xavier"
+  row_init_method: "zero"
+  
+  # Layer selection (focus on later layers for code understanding)
+  layer_selection: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+  
+  # Advanced settings
+  weight_tying: false
+  module_filter: null
+  
+  # Training specific settings
+  learning_rate_multiplier: 1.2  # Slightly higher for code adaptation
+  freeze_base_model: true
+  
+  # Memory optimization
+  use_gradient_checkpointing: true
+  offload_to_cpu: false
+  
+  # Quantization settings (optional)
+  quantization:
+    enabled: false
+    bits: 4
+    quant_type: "nf4"
+    use_double_quant: true
+    
+# Model-specific optimizations for CodeLlama
+model_optimizations:
+  # Attention optimizations
+  attention:
+    use_flash_attention: true
+    attention_dropout: 0.0
+    
+  # Memory optimizations (longer sequences for code)
+  memory:
+    gradient_accumulation_steps: 8  # Larger accumulation for long code sequences
+    dataloader_pin_memory: true
+    empty_cache_steps: 200
+    
+  # Precision settings
+  precision:
+    use_amp: true
+    amp_level: "O1"
+    loss_scale: "dynamic"
+    
+  # Code-specific optimizations
+  code_optimizations:
+    # Longer context for code understanding
+    max_sequence_length: 16384
+    
+    # Code-specific tokens
+    special_tokens:
+      - "<PRE>"   # Prefix token
+      - "<SUF>"   # Suffix token  
+      - "<MID>"   # Middle token
+      
+    # Evaluation metrics for code
+    code_metrics:
+      - "exact_match"
+      - "bleu"
+      - "codebleu"
+      - "pass_at_k"
+      
+    # Training strategies for code
+    training:
+      use_curriculum_learning: true
+      start_with_shorter_sequences: true
+      gradually_increase_length: true

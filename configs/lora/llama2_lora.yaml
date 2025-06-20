@@ -1,0 +1,63 @@
+# LoRA Configuration for LLaMA2 Models
+
+lora:
+  # Basic LoRA settings
+  enabled: true
+  peft_scheme: "lora"
+  
+  # LoRA hyperparameters optimized for LLaMA2
+  adapter_dim: 32  # Rank (r)
+  adapter_dropout: 0.1
+  alpha_scaling: 64  # alpha = 2 * rank for balanced scaling
+  
+  # Target modules for LLaMA2 architecture
+  target_modules:
+    - "attention_qkv"    # Query, Key, Value projections
+    - "attention_dense"  # Output projection
+    - "mlp_fc1"         # First MLP layer
+    - "mlp_fc2"         # Second MLP layer
+  
+  # Initialization methods
+  column_init_method: "xavier"  # For A matrices
+  row_init_method: "zero"       # For B matrices
+  
+  # Layer selection (null means all layers)
+  layer_selection: null
+  
+  # Advanced settings
+  weight_tying: false
+  module_filter: null
+  
+  # Training specific settings
+  learning_rate_multiplier: 1.0  # Multiplier for LoRA parameters
+  freeze_base_model: true
+  
+  # Memory optimization
+  use_gradient_checkpointing: true
+  offload_to_cpu: false
+  
+  # Quantization settings (optional)
+  quantization:
+    enabled: false
+    bits: 4
+    quant_type: "nf4"
+    use_double_quant: true
+    
+# Model-specific optimizations for LLaMA2
+model_optimizations:
+  # Attention optimizations
+  attention:
+    use_flash_attention: true
+    attention_dropout: 0.0
+    
+  # Memory optimizations
+  memory:
+    gradient_accumulation_steps: 4
+    dataloader_pin_memory: true
+    empty_cache_steps: 100
+    
+  # Precision settings
+  precision:
+    use_amp: true
+    amp_level: "O1"
+    loss_scale: "dynamic"

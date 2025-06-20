@@ -1,0 +1,71 @@
+# LoRA Configuration for LLaMA3 Models
+
+lora:
+  # Basic LoRA settings
+  enabled: true
+  peft_scheme: "lora"
+  
+  # LoRA hyperparameters optimized for LLaMA3
+  adapter_dim: 64  # Higher rank for LLaMA3's improved architecture
+  adapter_dropout: 0.05  # Lower dropout for better performance
+  alpha_scaling: 128  # alpha = 2 * rank
+  
+  # Target modules for LLaMA3 architecture (with GQA support)
+  target_modules:
+    - "attention_qkv"    # Query, Key, Value projections
+    - "attention_dense"  # Output projection
+    - "mlp_fc1"         # Gate and Up projections
+    - "mlp_fc2"         # Down projection
+  
+  # Initialization methods
+  column_init_method: "xavier"
+  row_init_method: "zero"
+  
+  # Layer selection (null means all layers)
+  layer_selection: null
+  
+  # Advanced settings
+  weight_tying: false
+  module_filter: null
+  
+  # Training specific settings
+  learning_rate_multiplier: 0.8  # Slightly lower for stability
+  freeze_base_model: true
+  
+  # Memory optimization
+  use_gradient_checkpointing: true
+  offload_to_cpu: false
+  
+  # Quantization settings (optional)
+  quantization:
+    enabled: false
+    bits: 4
+    quant_type: "nf4"
+    use_double_quant: true
+    
+# Model-specific optimizations for LLaMA3
+model_optimizations:
+  # Attention optimizations (GQA support)
+  attention:
+    use_flash_attention: true
+    attention_dropout: 0.0
+    grouped_query_attention: true
+    num_query_groups: 8
+    
+  # Memory optimizations
+  memory:
+    gradient_accumulation_steps: 2  # Can use smaller steps due to efficiency
+    dataloader_pin_memory: true
+    empty_cache_steps: 50
+    
+  # Precision settings
+  precision:
+    use_amp: true
+    amp_level: "O1"
+    loss_scale: "dynamic"
+    
+  # Sequence length optimizations
+  sequence:
+    use_rope_scaling: true
+    rope_scaling_factor: 1.0
+    max_position_embeddings: 8192

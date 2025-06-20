@@ -1,0 +1,89 @@
+# Training Configuration for LLaMA2 Models
+
+# Model settings
+model:
+  type: "llama2"
+  size: "7b"
+  base_model_path: "meta-llama/Llama-2-7b-hf"
+  
+# Data settings
+data:
+  train_file: "data/train.yaml"
+  val_file: "data/val.yaml"
+  test_file: "data/test.yaml"
+  max_seq_length: 4096
+  batch_size: 4
+  num_workers: 4
+  validation_split: 0.1
+  
+# Training hyperparameters
+training:
+  max_epochs: 3
+  learning_rate: 2.0e-4
+  warmup_steps: 100
+  weight_decay: 0.01
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 4
+  precision: "bf16"
+  strategy: "ddp"
+  
+# LoRA settings
+lora:
+  enabled: true
+  rank: 32
+  alpha: 64
+  dropout: 0.1
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+  
+# Optimizer settings
+optimizer:
+  name: "adamw"
+  lr: 2.0e-4
+  betas: [0.9, 0.95]
+  eps: 1.0e-8
+  weight_decay: 0.01
+  
+# Scheduler settings
+scheduler:
+  name: "cosine"
+  warmup_steps: 100
+  max_steps: 1000
+  min_lr: 2.0e-5
+  
+# Evaluation settings
+evaluation:
+  eval_steps: 500
+  save_steps: 1000
+  metrics: ["perplexity", "bleu", "rouge"]
+  max_eval_examples: 100
+  
+# Logging settings
+logging:
+  log_dir: "logs"
+  log_every_n_steps: 10
+  wandb_project: "nemo-llama2-finetune"
+  tensorboard_dir: "logs/tensorboard"
+  
+# Checkpointing settings
+checkpointing:
+  checkpoint_dir: "checkpoints"
+  save_top_k: 3
+  monitor: "val_loss"
+  mode: "min"
+  save_last: true
+  
+# Hardware settings
+hardware:
+  gpus: 1
+  nodes: 1
+  accelerator: "gpu"
+  devices: "auto"
+  
+# Deployment settings
+deployment:
+  output_dir: "deploy"
+  model_name: null  # Auto-generated if null
+  copy_tokenizer: true
+  create_config: true
+  create_readme: true
+  create_inference_script: true
