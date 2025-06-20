@@ -4,26 +4,51 @@ services:
     build: .
     container_name: llm-server
     ports:
-      - "8884:8884"
+      - "${PORT:-8884}:${PORT:-8884}"
     volumes:
       - ./models:/app/models:ro  # Mount local models directory (read-only)
       - llm_cache:/root/.cache   # Cache for HF models
-    env_file:
-      - .env  
+    environment:
+      # Model Configuration (Local models take priority)
+      # For Code Models: CodeLlama-13B, StarCoder-15B, DeepSeek-Coder
+      HF_MODEL_LOCAL_PATH: "./models/gpt2-large"
+      HF_MODEL_NAME: "gpt2-large"
+
+      # Alternative models (uncomment to use):
+      # HF_MODEL_LOCAL_PATH: "./models/starcoder"
+      # HF_MODEL_NAME: "bigcode/starcoder"
+      # HF_MODEL_LOCAL_PATH: "./models/deepseek-coder-6.7b-instruct"
+      # HF_MODEL_NAME: "deepseek-ai/deepseek-coder-6.7b-instruct"
+
+      # HuggingFace Settings
+      TRUST_REMOTE_CODE: "true"
+
+      # Server Configuration
+      HOST: "0.0.0.0"
+      PORT: "8884"
+
+      # Performance Settings (auto = smart detection)
+      DEVICE: "auto"              # auto, cpu, cuda - auto detects best option
+      TORCH_DTYPE: "auto"         # auto, float32, float16 - auto chooses compatible dtype
+      LOW_CPU_MEM_USAGE: "true"   # Optimize memory usage
+
+      # Logging
+      LOG_LEVEL: "INFO"           # DEBUG, INFO, WARNING, ERROR
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8884/v1/health/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:$$PORT/v1/health/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 120s  # Allow time for model loading
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # GPU support disabled for testing (uncomment below for GPU support)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
 
 volumes:
   llm_cache:

@@ -68,43 +68,15 @@ else
     exit 1
 fi
 
-# Step 4: Setup .env
-print_info "Step 4: Setting up .env file..."
-if [ ! -f .env ]; then
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        print_success "✓ Created .env from .env.example"
-    else
-        cat > .env << EOF
-# LLM Server Configuration for Manual Development
-
-# Model Configuration
-HF_MODEL_LOCAL_PATH=./models/my-finetuned-model
-HF_MODEL_NAME=microsoft/DialoGPT-medium
-
-# Server Configuration
-HOST=127.0.0.1
-PORT=8000
-LOG_LEVEL=INFO
-
-# Performance Settings
-DEVICE=auto
-TORCH_DTYPE=float16
-LOW_CPU_MEM_USAGE=true
-
-# Development Settings
-MAX_TOKENS=512
-TEMPERATURE=0.7
-EOF
-        print_success "✓ Created default .env file"
-    fi
-else
-    print_success "✓ .env file already exists"
-fi
+# Step 4: Environment setup
+print_info "Step 4: Environment configuration..."
+print_success "✓ Environment variables are now embedded in deployment scripts"
+print_info "  - Docker: Variables in docker-compose.yaml"
+print_info "  - Manual: Variables in run_manual.sh"
 
 # Step 5: Download test model
 print_info "Step 5: Checking/downloading test model..."
-if [ -d "./models/my-finetuned-model" ] && [ -f "./models/my-finetuned-model/config.json" ]; then
+if [ -d "./models/CodeLlama-13b-Instruct-hf" ] && [ -f "./models/CodeLlama-13b-Instruct-hf/config.json" ]; then
     print_success "✓ Test model already exists"
 else
     print_info "Downloading test model (this may take a few minutes)..."
@@ -134,7 +106,7 @@ echo
 print_success "🎉 Development environment setup complete!"
 echo
 print_info "Quick start commands:"
-echo "  ./run_manual.sh                 # Start server (default: http://127.0.0.1:8000)"
+echo "  ./run_manual.sh                 # Start server (default: http://127.0.0.1:8884)"
 echo "  ./run_manual.sh --port 8001     # Start on different port"
 echo "  ./run_manual.sh --reload        # Development mode with auto-reload"
 echo "  ./run_manual.sh --device cpu    # Force CPU-only mode"
@@ -143,11 +115,12 @@ echo
 print_info "Development workflow:"
 echo "  1. Start server: ./run_manual.sh --reload --log-level debug"
 echo "  2. In another terminal: ./test_manual.sh"
-echo "  3. Test API: curl http://127.0.0.1:8000/v1/health/ready"
-echo "  4. View docs: http://127.0.0.1:8000/docs"
+echo "  3. Test API: curl http://127.0.0.1:8884/v1/health/ready"
+echo "  4. View docs: http://127.0.0.1:8884/docs"
 echo
 print_info "Configuration files:"
-echo "  - .env                   # Environment variables"
+echo "  - run_manual.sh          # Manual deployment with embedded env vars"
+echo "  - docker-compose.yaml    # Docker deployment with embedded env vars"
 echo "  - models/               # Local models directory"
 echo "  - app.py                # Main server code"
 echo

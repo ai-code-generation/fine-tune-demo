@@ -58,12 +58,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Check if .env exists
-if [ ! -f .env ]; then
-    print_warning ".env file not found, copying from .env.example"
-    cp .env.example .env
-    print_info "Please edit .env file with your HuggingFace configurations"
-fi
+# Environment variables are now embedded directly in docker-compose.yaml
+print_info "Using embedded environment variables from docker-compose.yaml"
+
+# Get PORT from docker-compose.yaml or use default
+PORT=$(docker-compose config | grep -A 20 "environment:" | grep "PORT:" | sed 's/.*PORT: *"\?\([^"]*\)"\?.*/\1/' | head -1)
+PORT=${PORT:-8884}
+print_info "Using port: $PORT"
 
 # Create network if it doesn't exist
 docker network create rag-network 2>/dev/null || true
@@ -83,7 +84,7 @@ if ! docker-compose up -d --build; then
     print_error "Failed to start LLM server"
     print_info "Troubleshooting steps:"
     print_info "1. Check Docker logs: docker-compose logs"
-    print_info "2. Verify .env configuration"
+    print_info "2. Verify docker-compose.yaml environment configuration"
     print_info "3. Ensure sufficient memory available"
     exit 1
 fi
@@ -94,7 +95,7 @@ max_attempts=30
 attempt=0
 
 while [ $attempt -lt $max_attempts ]; do
-    if curl -s -f http://localhost:8884/v1/health/ready > /dev/null 2>&1; then
+    if curl -s -f http://localhost:$PORT/v1/health/ready > /dev/null 2>&1; then
         break
     fi
     
@@ -110,10 +111,10 @@ done
 print_info "LLM server started successfully!"
 echo ""
 print_info "Access points:"
-echo "  - LLM API: http://localhost:8884"
-echo "  - Health: http://localhost:8884/v1/health/ready"
-echo "  - Models: http://localhost:8884/v1/models"
-echo "  - Chat Completions: http://localhost:8884/v1/chat/completions"
+echo "  - LLM API: http://localhost:$PORT"
+echo "  - Health: http://localhost:$PORT/v1/health/ready"
+echo "  - Models: http://localhost:$PORT/v1/models"
+echo "  - Chat Completions: http://localhost:$PORT/v1/chat/completions"
 
 print_info "Backend: HuggingFace Transformers"
 

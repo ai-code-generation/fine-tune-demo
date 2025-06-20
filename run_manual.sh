@@ -38,7 +38,7 @@ OPTIONS:
     --port PORT         Server port (default: 8884)
     --host HOST         Server host (default: 127.0.0.1)
     --device DEVICE     Device: cpu, cuda, auto (default: auto)
-    --model-path PATH   Path to local model (default: ./models/my-finetuned-model)
+    --model-path PATH   Path to local model (default: ./models/CodeLlama-13b-Instruct-hf)
     --log-level LEVEL   Log level: debug, info, warning, error (default: info)
     --reload            Enable auto-reload for development
     --install-deps      Install Python dependencies
@@ -55,18 +55,14 @@ EXAMPLES:
     $0 --check-deps                      # Check dependencies and exit
 
 ENVIRONMENT VARIABLES:
-    HF_MODEL_LOCAL_PATH    Path to local model
-    HF_MODEL_NAME          HuggingFace Hub model name (fallback)
-    HF_TOKEN               HuggingFace token
-    DEVICE                 Device to use (cpu, cuda, auto)
-    PORT                   Server port
-    HOST                   Server host
-    LOG_LEVEL              Log level
+    All environment variables are set directly in this script.
+    Command line arguments override the default values.
+    No .env file is used for manual deployment.
 
 EOF
 }
 
-# Default values
+# Default values (matching Docker configuration)
 PORT=8884
 HOST="127.0.0.1"
 DEVICE="auto"
@@ -302,34 +298,44 @@ check_gpu() {
 # Function to set environment variables
 setup_environment() {
     print_info "Setting up environment..."
-    
-    # Load .env file if it exists
-    if [ -f ".env" ]; then
-        print_info "Loading .env file..."
-        set -a
-        source .env
-        set +a
-    fi
-    
-    # Override with command line arguments
+
+    # Set all environment variables directly (no .env file dependency)
+    # Model Configuration (Local models take priority)
+    # For Code Models: CodeLlama-13B, StarCoder-15B, DeepSeek-Coder
     export HF_MODEL_LOCAL_PATH="${MODEL_PATH}"
-    export DEVICE="${DEVICE}"
+    export HF_MODEL_NAME="${HF_MODEL_NAME:-codellama/CodeLlama-13b-Instruct-hf}"
+
+    # Alternative models (can be overridden via command line):
+    # export HF_MODEL_LOCAL_PATH="./models/starcoder"
+    # export HF_MODEL_NAME="bigcode/starcoder"
+    # export HF_MODEL_LOCAL_PATH="./models/deepseek-coder-6.7b-instruct"
+    # export HF_MODEL_NAME="deepseek-ai/deepseek-coder-6.7b-instruct"
+
+    # HuggingFace Settings
+    export TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-true}"
+
+    # Server Configuration
     export HOST="${HOST}"
     export PORT="${PORT}"
-    export LOG_LEVEL="${LOG_LEVEL^^}"  # Convert to uppercase
-    
-    # Set fallback values
-    export HF_MODEL_NAME="${HF_MODEL_NAME:-microsoft/DialoGPT-medium}"
-    export TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-false}"
-    export TORCH_DTYPE="${TORCH_DTYPE:-float16}"
-    export LOW_CPU_MEM_USAGE="${LOW_CPU_MEM_USAGE:-true}"
-    
+
+    # Performance Settings (auto = smart detection)
+    export DEVICE="${DEVICE}"              # auto, cpu, cuda - auto detects best option
+    export TORCH_DTYPE="${TORCH_DTYPE:-auto}"         # auto, float32, float16 - auto chooses compatible dtype
+    export LOW_CPU_MEM_USAGE="${LOW_CPU_MEM_USAGE:-true}"   # Optimize memory usage
+
+    # Logging
+    export LOG_LEVEL="${LOG_LEVEL^^}"           # DEBUG, INFO, WARNING, ERROR (convert to uppercase)
+
     print_info "Environment configuration:"
     echo "  - Model Path: $HF_MODEL_LOCAL_PATH"
+    echo "  - Model Name: $HF_MODEL_NAME"
     echo "  - Device: $DEVICE"
     echo "  - Host: $HOST"
     echo "  - Port: $PORT"
     echo "  - Log Level: $LOG_LEVEL"
+    echo "  - Trust Remote Code: $TRUST_REMOTE_CODE"
+    echo "  - Torch Dtype: $TORCH_DTYPE"
+    echo "  - Low CPU Memory Usage: $LOW_CPU_MEM_USAGE"
 }
 
 # Function to run the server

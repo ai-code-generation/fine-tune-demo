@@ -20,8 +20,8 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Default server URL
-SERVER_URL="http://127.0.0.1:8000"
+# Default server URL (matching run_manual.sh default)
+SERVER_URL="http://127.0.0.1:8884"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do

@@ -93,32 +93,47 @@ curl -X POST http://localhost:8884/v1/chat/completions \
   }'
 ```
 
-## ⚙️ Configuration (.env)
+## ⚙️ Configuration
 
-All configuration is managed through environment variables in the `.env` file:
+Environment variables are managed differently based on deployment method:
 
-```env
-# Model Configuration (Local models take priority)
-HF_MODEL_LOCAL_PATH=./models/my-finetuned-model
-HF_MODEL_NAME=microsoft/DialoGPT-medium
+### 🐳 Docker Deployment
+All environment variables are embedded directly in `docker-compose.yaml`:
 
-# HuggingFace Settings  
-TRUST_REMOTE_CODE=false     # Set to true for models requiring custom code
+```yaml
+environment:
+  # Model Configuration (Local models take priority)
+  HF_MODEL_LOCAL_PATH: "./models/CodeLlama-13b-Instruct-hf"
+  HF_MODEL_NAME: "codellama/CodeLlama-13b-Instruct-hf"
 
-# Server Configuration
-HOST=0.0.0.0
-PORT=8884
+  # HuggingFace Settings
+  TRUST_REMOTE_CODE: "true"
 
-# Performance Settings
-DEVICE=auto                 # auto, cpu, cuda
-TORCH_DTYPE=float16         # float16, float32
-LOW_CPU_MEM_USAGE=true      # Optimize memory usage
+  # Server Configuration
+  HOST: "0.0.0.0"
+  PORT: "8884"
 
-# Logging
-LOG_LEVEL=INFO              # DEBUG, INFO, WARNING, ERROR
+  # Performance Settings
+  DEVICE: "auto"              # auto, cpu, cuda
+  TORCH_DTYPE: "auto"         # auto, float32, float16
+  LOW_CPU_MEM_USAGE: "true"   # Optimize memory usage
+
+  # Logging
+  LOG_LEVEL: "INFO"           # DEBUG, INFO, WARNING, ERROR
 ```
 
-**Note**: All environment variables are loaded from the `.env` file automatically by Docker Compose.
+### 🔧 Manual Deployment
+All environment variables are embedded directly in `run_manual.sh` script. You can override them using command-line arguments:
+
+```bash
+./run_manual.sh --port 8001 --device cpu --log-level debug
+```
+
+**Benefits**:
+- ✅ Single file to edit per deployment method
+- ✅ No .env file confusion
+- ✅ Deployment-specific configurations
+- ✅ Easy to maintain and version control
 
 ## 🛠️ Development Mode
 
@@ -148,7 +163,7 @@ docker logs -f llm-server             # View logs
 docker stats llm-server               # Monitor resources
 ```
 
-**Environment Configuration**: Docker Compose automatically loads all environment variables from the `.env` file using `env_file` directive. No need to declare variables individually in docker-compose.yaml.
+**Environment Configuration**: All environment variables are embedded directly in `docker-compose.yaml`. To change configuration, edit the `environment` section in the docker-compose file.
 
 ## 📚 API Endpoints
 
