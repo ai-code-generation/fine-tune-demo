@@ -20,7 +20,7 @@ training:
   batch_size: 4
   gradient_accumulation_steps: 4
   learning_rate: 2e-4
-  num_epochs: 3
+  num_epochs: 3.0
   warmup_steps: 100
   logging_steps: 10
   save_steps: 500

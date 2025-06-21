@@ -75,15 +75,21 @@ check_docker_gpu_support() {
 # Function to create necessary directories
 create_directories() {
     print_status "Creating necessary directories..."
-    
+
     mkdir -p output
     mkdir -p cache
     mkdir -p logs
     mkdir -p data
     mkdir -p configs/model_configs
     mkdir -p configs/lora_configs
-    
+
+    # Set proper permissions for cache and logs directories
+    chmod 755 cache logs output data
+
     print_status "Directories created successfully"
+    print_status "Cache directory: ./cache (for model downloads)"
+    print_status "Logs directory: ./logs (for training logs)"
+    print_status "Output directory: ./output (for trained models)"
 }
 
 # Function to build the Docker image

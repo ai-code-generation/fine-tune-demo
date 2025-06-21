@@ -43,10 +43,10 @@ services:
       - ./configs:/workspace/configs
 
       # Mount cache directory to persist downloaded models
-      - model_cache:/workspace/cache
+      - ./cache:/workspace/cache
 
       # Mount logs directory
-      - training_logs:/workspace/logs
+      - ./logs:/workspace/logs
 
       # Mount scripts for easy modification during development
       - ./scripts:/workspace/scripts
@@ -86,12 +86,10 @@ services:
 
 
 
-# Named volumes for persistence
-volumes:
-  model_cache:
-    driver: local
-  training_logs:
-    driver: local
+# Local directories are used instead of named volumes
+# ./cache - for model downloads and caching
+# ./logs - for training logs
+# ./output - for trained models
 
 # Networks
 networks:
