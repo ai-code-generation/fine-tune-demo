@@ -145,11 +145,20 @@ data/*.json
 data/processed/
 data/raw/
 
-# Model files
-models/
+# Model files (exclude trained models but keep source code)
+# Note: src/models/ contains source code and should be tracked
+*.nemo
+*.pt
+*.pth
+*.bin
+*.safetensors
 deploy/*/model.*
 deploy/*/pytorch_model*
 deploy/*/model-*
+# Exclude model download directories but not src/models/
+/models/
+downloaded_models/
+pretrained_models/
 
 # IDE
 .vscode/
