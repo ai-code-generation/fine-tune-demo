@@ -1,0 +1,42 @@
+# Advanced LoRA Configuration
+# Use this with newer versions of PEFT that support advanced features
+
+lora:
+  # LoRA rank - number of low-rank matrices
+  # Higher values = more parameters but potentially better adaptation
+  r: 32
+  
+  # LoRA scaling factor
+  # Usually set to 2 * r for optimal performance
+  lora_alpha: 64
+  
+  # Dropout rate for LoRA layers
+  lora_dropout: 0.05
+  
+  # Target modules to apply LoRA to
+  # More modules = more parameters but better adaptation
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  
+  # Bias handling
+  bias: "none"
+  
+  # Task type
+  task_type: "CAUSAL_LM"
+  
+  # Advanced features (only available in newer PEFT versions)
+  # These will be automatically ignored if not supported
+  
+  # Whether to use rslora (rank-stabilized LoRA)
+  # Helps with training stability for higher ranks
+  use_rslora: true
+  
+  # Whether to use DoRA (Weight-Decomposed Low-Rank Adaptation)
+  # Can provide better performance than standard LoRA
+  use_dora: false

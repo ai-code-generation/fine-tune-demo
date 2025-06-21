@@ -161,16 +161,35 @@ class ModelSetup:
         """
         lora_params = self.lora_config['lora']
         
-        lora_config = LoraConfig(
-            r=lora_params['r'],
-            lora_alpha=lora_params['lora_alpha'],
-            lora_dropout=lora_params['lora_dropout'],
-            target_modules=lora_params['target_modules'],
-            bias=lora_params.get('bias', 'none'),
-            task_type=lora_params.get('task_type', 'CAUSAL_LM'),
-            use_rslora=lora_params.get('use_rslora', False),
-            use_dora=lora_params.get('use_dora', False)
-        )
+        # Create LoRA config with only supported parameters
+        lora_config_params = {
+            'r': lora_params['r'],
+            'lora_alpha': lora_params['lora_alpha'],
+            'lora_dropout': lora_params['lora_dropout'],
+            'target_modules': lora_params['target_modules'],
+            'bias': lora_params.get('bias', 'none'),
+            'task_type': lora_params.get('task_type', 'CAUSAL_LM')
+        }
+
+        # Add optional parameters only if they exist and are supported
+        # Check for newer PEFT features
+        try:
+            # Test if use_rslora is supported
+            LoraConfig(r=1, lora_alpha=1, target_modules=["test"], use_rslora=False)
+            if 'use_rslora' in lora_params:
+                lora_config_params['use_rslora'] = lora_params['use_rslora']
+        except TypeError:
+            logger.info("use_rslora parameter not supported in this PEFT version")
+
+        try:
+            # Test if use_dora is supported
+            LoraConfig(r=1, lora_alpha=1, target_modules=["test"], use_dora=False)
+            if 'use_dora' in lora_params:
+                lora_config_params['use_dora'] = lora_params['use_dora']
+        except TypeError:
+            logger.info("use_dora parameter not supported in this PEFT version")
+
+        lora_config = LoraConfig(**lora_config_params)
         
         logger.info(f"LoRA config: r={lora_config.r}, alpha={lora_config.lora_alpha}, "
                    f"dropout={lora_config.lora_dropout}")

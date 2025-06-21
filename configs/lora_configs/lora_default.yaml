@@ -25,12 +25,6 @@ lora:
   
   # Task type
   task_type: "CAUSAL_LM"
-  
-  # Whether to use rslora (rank-stabilized LoRA)
-  use_rslora: false
-  
-  # Whether to use DoRA (Weight-Decomposed Low-Rank Adaptation)
-  use_dora: false
 
 # Alternative configurations for different use cases
 alternative_configs:

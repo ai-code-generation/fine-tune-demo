@@ -33,11 +33,11 @@ def check_gpu_availability():
 def check_bitsandbytes():
     """Check if bitsandbytes is working properly."""
     try:
-        import bitsandbytes as bnb
-        
+        import bitsandbytes as bnb  # noqa: F401
+
         # Try to create a simple quantization config
         from transformers import BitsAndBytesConfig
-        config = BitsAndBytesConfig(
+        config = BitsAndBytesConfig(  # noqa: F841
             load_in_4bit=True,
             bnb_4bit_compute_dtype="float16",
             bnb_4bit_quant_type="nf4"
@@ -47,6 +47,41 @@ def check_bitsandbytes():
     except Exception as e:
         print(f"❌ BitsAndBytes not working: {e}")
         return False
+
+
+def check_peft_features():
+    """Check which PEFT features are available."""
+    try:
+        from peft import LoraConfig
+
+        features = {
+            'use_rslora': False,
+            'use_dora': False
+        }
+
+        # Test use_rslora
+        try:
+            LoraConfig(r=1, lora_alpha=1, target_modules=["test"], use_rslora=False)
+            features['use_rslora'] = True
+        except TypeError:
+            pass
+
+        # Test use_dora
+        try:
+            LoraConfig(r=1, lora_alpha=1, target_modules=["test"], use_dora=False)
+            features['use_dora'] = True
+        except TypeError:
+            pass
+
+        print("📦 PEFT Features:")
+        for feature, available in features.items():
+            status = "✅" if available else "❌"
+            print(f"   {status} {feature}: {'Available' if available else 'Not available'}")
+
+        return features
+    except Exception as e:
+        print(f"❌ Error checking PEFT features: {e}")
+        return {}
 
 
 def check_memory_requirements(gpu_memory_gb):
@@ -82,6 +117,9 @@ def recommend_configuration():
     
     # Check bitsandbytes
     has_bnb = check_bitsandbytes()
+
+    # Check PEFT features
+    peft_features = check_peft_features()
     
     print("\n" + "=" * 50)
     print("📋 RECOMMENDATIONS")

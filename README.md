@@ -137,7 +137,10 @@ The pipeline supports two model sizes:
 - **CodeLlama 7B**: `configs/model_configs/codellama_7b.yaml`
 - **CodeLlama 13B**: `configs/model_configs/codellama_13b.yaml`
 
-LoRA configuration can be customized in `configs/lora_configs/lora_default.yaml`:
+LoRA configuration can be customized in `configs/lora_configs/`:
+
+- **`lora_default.yaml`** - Basic LoRA config (compatible with all PEFT versions)
+- **`lora_advanced.yaml`** - Advanced features (requires newer PEFT versions)
 
 ```yaml
 lora:
