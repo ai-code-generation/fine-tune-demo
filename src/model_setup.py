@@ -77,24 +77,33 @@ class ModelSetup:
     def setup_quantization_config(self) -> BitsAndBytesConfig:
         """
         Setup quantization configuration for memory efficiency.
-        
+
         Returns:
-            BitsAndBytesConfig for 4-bit quantization
+            BitsAndBytesConfig for 4-bit quantization or None if not available
         """
         quant_config = self.model_config.get('quantization', {})
-        
+
         if not quant_config.get('load_in_4bit', False):
             return None
-            
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=getattr(torch, quant_config.get('bnb_4bit_compute_dtype', 'bfloat16')),
-            bnb_4bit_use_double_quant=quant_config.get('bnb_4bit_use_double_quant', True),
-            bnb_4bit_quant_type=quant_config.get('bnb_4bit_quant_type', 'nf4')
-        )
-        
-        logger.info("4-bit quantization configuration setup complete")
-        return bnb_config
+
+        try:
+            # Test if bitsandbytes is working properly
+            import bitsandbytes  # noqa: F401
+
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=getattr(torch, quant_config.get('bnb_4bit_compute_dtype', 'bfloat16')),
+                bnb_4bit_use_double_quant=quant_config.get('bnb_4bit_use_double_quant', True),
+                bnb_4bit_quant_type=quant_config.get('bnb_4bit_quant_type', 'nf4')
+            )
+
+            logger.info("4-bit quantization configuration setup complete")
+            return bnb_config
+
+        except Exception as e:
+            logger.warning(f"Quantization setup failed: {e}")
+            logger.warning("Falling back to full precision training")
+            return None
     
     def setup_model(self, tokenizer: AutoTokenizer) -> AutoModelForCausalLM:
         """
@@ -128,8 +137,12 @@ class ModelSetup:
         
         # Prepare model for k-bit training if quantization is used
         if quantization_config is not None:
-            model = prepare_model_for_kbit_training(model)
-            logger.info("Model prepared for k-bit training")
+            try:
+                model = prepare_model_for_kbit_training(model)
+                logger.info("Model prepared for k-bit training")
+            except Exception as e:
+                logger.warning(f"Failed to prepare model for k-bit training: {e}")
+                logger.warning("Continuing with standard training")
         
         # Enable gradient checkpointing for memory efficiency
         if self.model_config.get('memory_optimization', {}).get('gradient_checkpointing', True):

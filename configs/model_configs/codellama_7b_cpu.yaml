@@ -1,0 +1,49 @@
+# CodeLlama 7B Model Configuration for CPU training
+# Use this when GPU is not available or for testing
+
+model:
+  name: "codellama/CodeLlama-7b-Instruct-hf"
+  model_type: "llama"
+  torch_dtype: "float32"  # Use float32 for CPU
+  device_map: "cpu"
+  trust_remote_code: true
+  use_cache: false
+
+tokenizer:
+  name: "codellama/CodeLlama-7b-Instruct-hf"
+  padding_side: "right"
+  truncation_side: "right"
+  add_eos_token: true
+  add_bos_token: true
+
+training:
+  max_length: 512  # Smaller for CPU training
+  batch_size: 1    # Very small batch size for CPU
+  gradient_accumulation_steps: 8  # Compensate with accumulation
+  learning_rate: 5e-5  # Lower learning rate for stability
+  num_epochs: 1    # Fewer epochs for testing
+  warmup_steps: 50
+  logging_steps: 5
+  save_steps: 100
+  eval_steps: 100
+  save_total_limit: 2
+  dataloader_num_workers: 0  # No multiprocessing on CPU
+  remove_unused_columns: false
+  optim: "adamw_torch"  # Standard optimizer
+  lr_scheduler_type: "linear"
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  group_by_length: false  # Disable for simplicity
+  ddp_find_unused_parameters: false
+
+quantization:
+  load_in_4bit: false  # No quantization on CPU
+  bnb_4bit_compute_dtype: "float32"
+  bnb_4bit_use_double_quant: false
+  bnb_4bit_quant_type: "fp4"
+
+memory_optimization:
+  gradient_checkpointing: false  # Can cause issues on CPU
+  dataloader_pin_memory: false   # Not needed for CPU
+  fp16: false  # Use full precision on CPU
+  bf16: false

@@ -1,4 +1,5 @@
-# CodeLlama 7B Model Configuration
+# CodeLlama 7B Model Configuration with 4-bit Quantization
+# Use this when bitsandbytes is working properly with GPU support
 
 model:
   name: "codellama/CodeLlama-7b-Instruct-hf"
@@ -17,8 +18,8 @@ tokenizer:
 
 training:
   max_length: 2048
-  batch_size: 4
-  gradient_accumulation_steps: 4
+  batch_size: 8  # Can use larger batch size with quantization
+  gradient_accumulation_steps: 2
   learning_rate: 2e-4
   num_epochs: 3
   warmup_steps: 100
@@ -28,7 +29,7 @@ training:
   save_total_limit: 3
   dataloader_num_workers: 4
   remove_unused_columns: false
-  optim: "adamw_torch"
+  optim: "paged_adamw_32bit"  # Requires bitsandbytes
   lr_scheduler_type: "cosine"
   weight_decay: 0.001
   max_grad_norm: 0.3
@@ -36,7 +37,7 @@ training:
   ddp_find_unused_parameters: false
 
 quantization:
-  load_in_4bit: false
+  load_in_4bit: true
   bnb_4bit_compute_dtype: "bfloat16"
   bnb_4bit_use_double_quant: true
   bnb_4bit_quant_type: "nf4"

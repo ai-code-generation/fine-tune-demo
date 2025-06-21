@@ -66,12 +66,17 @@ fine-tune-pipeline/
    docker exec -it codellama-finetune python scripts/verify_installation.py
    ```
 
-4. **Create sample training data:**
+4. **Check your environment and get configuration recommendations:**
+   ```bash
+   docker exec -it codellama-finetune python scripts/check_environment.py
+   ```
+
+5. **Create sample training data:**
    ```bash
    ./scripts/docker_setup.sh sample-data
    ```
 
-5. **Start training:**
+6. **Start training:**
    ```bash
    ./scripts/docker_setup.sh train
    ```
