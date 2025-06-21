@@ -42,13 +42,13 @@ services:
       retries: 3
       start_period: 120s  # Allow time for model loading
     # GPU support disabled for testing (uncomment below for GPU support)
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   llm_cache:
