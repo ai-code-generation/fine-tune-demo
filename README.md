@@ -51,6 +51,11 @@ fine-tune-pipeline/
    ```
    *This installs CUDA 12.1 and all dependencies inside the container*
 
+   **If build fails, try the NVIDIA base image:**
+   ```bash
+   ./scripts/build_docker.sh --nvidia
+   ```
+
 2. **Setup the environment:**
    ```bash
    ./scripts/docker_setup.sh setup

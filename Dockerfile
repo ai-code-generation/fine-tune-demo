@@ -63,16 +63,15 @@ RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86
     && apt-get update \
     && apt-get install -y \
         cuda-toolkit-12-1 \
-        cuda-drivers-devel-12-1 \
-        libcudnn8-dev \
-        libnccl-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm cuda-keyring_1.0-1_all.deb
 
 # Set up CUDA environment
 RUN echo "/usr/local/cuda/lib64" >> /etc/ld.so.conf.d/cuda.conf \
-    && ldconfig
+    && echo "/usr/local/cuda-12.1/lib64" >> /etc/ld.so.conf.d/cuda.conf \
+    && ldconfig \
+    && ln -sf /usr/local/cuda-12.1 /usr/local/cuda
 
 # Create symbolic link for python
 RUN ln -s /usr/bin/python3 /usr/bin/python
@@ -115,8 +114,11 @@ RUN pip install --no-cache-dir \
 # Install remaining dependencies from requirements.txt (if any additional ones)
 RUN pip install --no-cache-dir -r requirements.txt || true
 
-# Verify CUDA and PyTorch installation
-RUN python -c "import torch; print(f'✅ PyTorch version: {torch.__version__}'); print(f'✅ CUDA available: {torch.cuda.is_available()}'); print(f'✅ CUDA version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}'); print(f'✅ GPU count: {torch.cuda.device_count()}')" || echo "⚠️ CUDA verification failed - will work in CPU mode"
+# Verify CUDA installation
+RUN nvcc --version || echo "⚠️ NVCC not found"
+
+# Verify PyTorch installation
+RUN python -c "import torch; print(f'✅ PyTorch version: {torch.__version__}'); print(f'✅ CUDA available: {torch.cuda.is_available()}'); print(f'✅ CUDA version: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}'); print(f'✅ GPU count: {torch.cuda.device_count()}')" || echo "⚠️ PyTorch CUDA verification failed - will work in CPU mode"
 
 # Copy the entire project
 COPY . .

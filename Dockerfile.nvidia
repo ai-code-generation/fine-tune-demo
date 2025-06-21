@@ -1,0 +1,134 @@
+# Alternative Dockerfile using NVIDIA CUDA base image
+# Use this if the self-contained approach has issues
+FROM nvidia/cuda:12.1-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    # Python and development tools
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    # Build tools
+    build-essential \
+    cmake \
+    ninja-build \
+    gcc \
+    g++ \
+    # Version control and utilities
+    git \
+    wget \
+    curl \
+    unzip \
+    # System monitoring and editing
+    vim \
+    nano \
+    htop \
+    tmux \
+    tree \
+    # Additional libraries for ML
+    libssl-dev \
+    libffi-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    liblzma-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symbolic link for python
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Upgrade pip and install essential Python tools
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install PyTorch with CUDA support first
+RUN pip install --no-cache-dir \
+    torch==2.1.0 \
+    torchvision==0.16.0 \
+    torchaudio==2.1.0 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Install other ML/AI dependencies
+RUN pip install --no-cache-dir \
+    transformers==4.35.2 \
+    tokenizers==0.14.1 \
+    datasets==2.14.6 \
+    accelerate==0.24.1 \
+    peft==0.6.2 \
+    bitsandbytes==0.41.3 \
+    numpy==1.24.4 \
+    scipy==1.11.4 \
+    pandas==2.1.3 \
+    scikit-learn==1.3.2 \
+    tqdm==4.66.1 \
+    wandb==0.16.0
+
+# Install remaining dependencies
+RUN pip install --no-cache-dir -r requirements.txt || true
+
+# Verify installations
+RUN nvcc --version
+RUN python -c "import torch; print(f'✅ PyTorch: {torch.__version__}'); print(f'✅ CUDA: {torch.cuda.is_available()}'); print(f'✅ GPU count: {torch.cuda.device_count()}')"
+
+# Copy the entire project
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /workspace/output /workspace/logs /workspace/cache /workspace/data /workspace/configs
+
+# Set permissions
+RUN chmod +x train.py && \
+    chmod +x setup.py && \
+    chmod +x scripts/manage_models.py && \
+    chmod +x scripts/run_tests.py && \
+    chmod +x scripts/docker_setup.sh
+
+# Create non-root user
+RUN useradd -m -u 1000 trainer && \
+    chown -R trainer:trainer /workspace
+
+# Switch to non-root user
+USER trainer
+
+# Set environment variables for caching
+ENV HF_HOME=/workspace/cache
+ENV TRANSFORMERS_CACHE=/workspace/cache
+ENV HF_DATASETS_CACHE=/workspace/cache
+ENV TORCH_HOME=/workspace/cache
+ENV CUDA_LAUNCH_BLOCKING=1
+
+# Verify pipeline imports
+RUN python -c "from src.data_handler import ConversationDataHandler; print('✅ Data handler')" && \
+    python -c "from src.model_setup import ModelSetup; print('✅ Model setup')" && \
+    python -c "from src.training import CodeLlamaTrainer; print('✅ Training')" && \
+    python -c "from src.utils import validate_model_output; print('✅ Utils')"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
+    CMD python -c "import torch, transformers, peft; print('Container healthy')" || exit 1
+
+# Default command
+CMD ["bash", "-c", "echo '🚀 CodeLlama Fine-tuning Pipeline (NVIDIA Base) Ready!'; echo ''; echo 'This container uses NVIDIA CUDA base image'; echo 'All dependencies pre-installed and verified'; echo ''; echo 'Quick start:'; echo '  python train.py --create-sample-data'; echo '  python train.py --model-config configs/model_configs/codellama_7b.yaml --train-data data/train.yaml'; echo ''; python -c \"import torch; print(f'CUDA Available: {torch.cuda.is_available()}'); print(f'GPU Count: {torch.cuda.device_count()}'); [print(f'GPU {i}: {torch.cuda.get_device_name(i)}') for i in range(torch.cuda.device_count())] if torch.cuda.is_available() else print('No GPU detected - will use CPU mode')\"; echo ''; echo 'Container ready. Use docker exec to access or start training.'; tail -f /dev/null"]

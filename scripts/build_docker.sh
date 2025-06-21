@@ -85,29 +85,54 @@ check_gpu_memory() {
 # Function to build the Docker image
 build_image() {
     print_header "Building Docker image..."
-    
+
     # Build arguments
     BUILD_ARGS=""
-    
+
     # Add build arguments if needed
     if [ ! -z "$HTTP_PROXY" ]; then
         BUILD_ARGS="$BUILD_ARGS --build-arg HTTP_PROXY=$HTTP_PROXY"
     fi
-    
+
     if [ ! -z "$HTTPS_PROXY" ]; then
         BUILD_ARGS="$BUILD_ARGS --build-arg HTTPS_PROXY=$HTTPS_PROXY"
     fi
-    
-    # Build the image
-    echo "Building image with command:"
-    echo "docker build $BUILD_ARGS -t codellama-finetune:latest ."
-    
-    if docker build $BUILD_ARGS -t codellama-finetune:latest .; then
-        print_status "Docker image built successfully"
-        return 0
+
+    # Choose Dockerfile based on flag
+    if [ "$USE_NVIDIA" = true ]; then
+        echo "Building with NVIDIA base image (forced):"
+        echo "docker build $BUILD_ARGS -f Dockerfile.nvidia -t codellama-finetune:latest ."
+
+        if docker build $BUILD_ARGS -f Dockerfile.nvidia -t codellama-finetune:latest .; then
+            print_status "NVIDIA base Docker image built successfully"
+            return 0
+        else
+            print_error "NVIDIA base Docker image build failed"
+            return 1
+        fi
     else
-        print_error "Docker image build failed"
-        return 1
+        # Try building with self-contained Dockerfile first
+        echo "Building self-contained image with command:"
+        echo "docker build $BUILD_ARGS -t codellama-finetune:latest ."
+
+        if docker build $BUILD_ARGS -t codellama-finetune:latest .; then
+            print_status "Self-contained Docker image built successfully"
+            return 0
+        else
+            print_warning "Self-contained build failed. Trying NVIDIA base image..."
+
+            # Try with NVIDIA base image as fallback
+            echo "Building with NVIDIA base image:"
+            echo "docker build $BUILD_ARGS -f Dockerfile.nvidia -t codellama-finetune:latest ."
+
+            if docker build $BUILD_ARGS -f Dockerfile.nvidia -t codellama-finetune:latest .; then
+                print_status "NVIDIA base Docker image built successfully"
+                return 0
+            else
+                print_error "Both Docker image builds failed"
+                return 1
+            fi
+        fi
     fi
 }
 
@@ -214,6 +239,7 @@ show_help() {
     echo "  --test-only      Test existing image without building"
     echo "  --dev            Create development docker-compose override"
     echo "  --no-cache       Build without using Docker cache"
+    echo "  --nvidia         Use NVIDIA base image (Dockerfile.nvidia)"
     echo "  --help           Show this help message"
     echo
     echo "Examples:"
@@ -229,6 +255,7 @@ BUILD_ONLY=false
 TEST_ONLY=false
 DEV_MODE=false
 NO_CACHE=false
+USE_NVIDIA=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -246,6 +273,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-cache)
             NO_CACHE=true
+            shift
+            ;;
+        --nvidia)
+            USE_NVIDIA=true
             shift
             ;;
         --help|-h)
