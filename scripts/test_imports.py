@@ -12,17 +12,26 @@ def test_imports():
     print("Testing pipeline imports...")
     print(f"Current working directory: {os.getcwd()}")
     print(f"Python version: {sys.version}")
-    
-    # Add src to path
+
+    # Setup robust import handling (same as run_pipeline.py)
     project_root = Path(__file__).parent.parent
     src_path = project_root / "src"
-    sys.path.insert(0, str(src_path))
-    
+
+    # Ensure src is in Python path
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+
+    # Also add the project root to handle different import scenarios
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+
     print(f"Source path: {src_path}")
     print(f"Source path exists: {src_path.exists()}")
-    
+
     if src_path.exists():
         print(f"Contents of src: {list(src_path.iterdir())}")
+
+    print(f"Python path includes: {[p for p in sys.path if 'workspace' in p or 'src' in p]}")
     
     # Test core dependencies
     try:
@@ -86,7 +95,30 @@ def test_imports():
         except AttributeError as e:
             print(f"❌ {module_name}.{class_name} attribute error: {e}")
             return False
-    
+
+    # Test the same import strategy as run_pipeline.py
+    print("\n🔍 Testing run_pipeline.py import strategy...")
+    try:
+        # Test the exact same import approach as run_pipeline.py
+        from training.trainer import NeMoTrainer
+        from training.lora_config import LoRAConfig
+        from models.model_config import ModelConfig
+        from models.model_factory import ModelFactory
+        from evaluation.evaluator import ModelEvaluator
+        from deployment.deployer import ModelDeployer
+        from deployment.converter import ModelConverter
+        print("✅ run_pipeline.py import strategy works!")
+    except ImportError as e:
+        print(f"❌ run_pipeline.py import strategy failed: {e}")
+        # Try the fallback strategies
+        print("🔄 Trying fallback strategies...")
+        try:
+            from src.training.trainer import NeMoTrainer
+            print("✅ src.training.trainer fallback works!")
+        except ImportError as e2:
+            print(f"❌ src.training.trainer fallback failed: {e2}")
+            return False
+
     print("\n🎉 All imports successful!")
     return True
 
