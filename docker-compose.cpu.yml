@@ -73,17 +73,7 @@ services:
       retries: 3
       start_period: 60s
 
-  # TensorBoard service for monitoring training (CPU mode)
-  tensorboard-cpu:
-    image: tensorflow/tensorflow:latest
-    container_name: codellama-tensorboard-cpu
-    ports:
-      - "6006:6006"
-    volumes:
-      - ./output:/logs
-    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
-    profiles:
-      - tensorboard
+
 
 # Named volumes for persistence
 volumes:

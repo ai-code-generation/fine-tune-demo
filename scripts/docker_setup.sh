@@ -164,31 +164,7 @@ create_sample_data() {
     print_status "Sample data created in data/ directory"
 }
 
-# Function to start TensorBoard
-start_tensorboard() {
-    print_header "Starting TensorBoard..."
-    
-    if command -v docker-compose &> /dev/null; then
-        docker-compose --profile tensorboard up -d tensorboard
-    else
-        docker compose --profile tensorboard up -d tensorboard
-    fi
-    
-    print_status "TensorBoard started at http://localhost:6006"
-}
 
-# Function to start Jupyter
-start_jupyter() {
-    print_header "Starting Jupyter Lab..."
-    
-    if command -v docker-compose &> /dev/null; then
-        docker-compose --profile jupyter up -d jupyter
-    else
-        docker compose --profile jupyter up -d jupyter
-    fi
-    
-    print_status "Jupyter Lab started at http://localhost:8888"
-}
 
 # Function to clean up Docker resources
 cleanup() {
@@ -228,8 +204,6 @@ show_help() {
     echo "  train           - Run training with default settings"
     echo "  train-custom    - Run training with custom parameters"
     echo "  sample-data     - Create sample training data"
-    echo "  tensorboard     - Start TensorBoard"
-    echo "  jupyter         - Start Jupyter Lab"
     echo "  cleanup         - Clean up Docker resources"
     echo "  help            - Show this help message"
     echo
@@ -237,7 +211,6 @@ show_help() {
     echo "  $0 setup                    # Complete setup"
     echo "  $0 train                    # Run training with defaults"
     echo "  $0 shell                    # Access container shell"
-    echo "  $0 tensorboard              # Start TensorBoard for monitoring"
 }
 
 # Main script logic
@@ -297,12 +270,6 @@ case "${1:-help}" in
         ;;
     sample-data)
         create_sample_data
-        ;;
-    tensorboard)
-        start_tensorboard
-        ;;
-    jupyter)
-        start_jupyter
         ;;
     cleanup)
         cleanup

@@ -6,7 +6,7 @@ Handles model loading, tokenizer setup, and LoRA configuration.
 import torch
 import yaml
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
@@ -14,7 +14,6 @@ from transformers import (
     TrainingArguments
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -228,7 +227,7 @@ class ModelSetup:
             load_best_model_at_end=True,
             metric_for_best_model="eval_loss",
             greater_is_better=False,
-            report_to=["tensorboard"],
+            report_to=[],  # No external reporting
             run_name=f"codellama-finetune-{training_config.get('run_name', 'default')}"
         )
         

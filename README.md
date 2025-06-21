@@ -219,18 +219,6 @@ docker exec -it codellama-finetune python scripts/verify_installation.py
 ./scripts/docker_setup.sh shell
 ```
 
-**Monitor training with TensorBoard:**
-```bash
-./scripts/docker_setup.sh tensorboard
-# Access at http://localhost:6006
-```
-
-**Start Jupyter for experimentation:**
-```bash
-./scripts/docker_setup.sh jupyter
-# Access at http://localhost:8888
-```
-
 **Stop and cleanup:**
 ```bash
 ./scripts/docker_setup.sh cleanup

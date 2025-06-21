@@ -110,7 +110,6 @@ RUN pip install --no-cache-dir \
     scikit-learn==1.3.2 \
     # Additional ML utilities
     tqdm==4.66.1 \
-    tensorboard==2.15.1 \
     wandb==0.16.0
 
 # Install remaining dependencies from requirements.txt (if any additional ones)
@@ -152,9 +151,7 @@ RUN python -c "from src.data_handler import ConversationDataHandler; print('✅ 
     python -c "from src.training import CodeLlamaTrainer; print('✅ Training module import successful')" && \
     python -c "from src.utils import validate_model_output; print('✅ Utils import successful')"
 
-# Expose ports
-EXPOSE 6006  # TensorBoard
-EXPOSE 8888  # Jupyter (if used)
+# No ports exposed - use docker exec to access container
 
 # Health check - modified to work without requiring GPU
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \

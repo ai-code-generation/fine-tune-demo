@@ -225,12 +225,6 @@ docker exec -it codellama-finetune python train.py \
 
 ### 4. Monitor Training
 
-**TensorBoard:**
-```bash
-./scripts/docker_setup.sh tensorboard
-# Access at http://localhost:6006
-```
-
 **Container logs:**
 ```bash
 docker-compose logs -f codellama-finetune
@@ -239,6 +233,12 @@ docker-compose logs -f codellama-finetune
 **GPU monitoring:**
 ```bash
 watch -n 1 nvidia-smi
+```
+
+**Training progress:**
+```bash
+# Access container and check logs
+docker exec -it codellama-finetune tail -f /workspace/logs/training.log
 ```
 
 ## Troubleshooting
