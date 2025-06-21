@@ -47,23 +47,26 @@ def check_python_version():
 
 
 def check_cuda_environment():
-    """Check CUDA environment."""
-    print_header("CUDA Environment")
-    
+    """Check CUDA environment (self-contained in container)."""
+    print_header("CUDA Environment (Self-Contained)")
+
+    print_info("This container includes its own CUDA toolkit!")
+    print_info("No host CUDA installation required.")
+
     try:
-        # Check CUDA toolkit
+        # Check CUDA toolkit (installed in container)
         result = subprocess.run(['nvcc', '--version'], capture_output=True, text=True)
         if result.returncode == 0:
             print_info("NVCC output:")
             print(result.stdout.strip())
-            print_status("CUDA toolkit is installed")
+            print_status("CUDA toolkit is installed in container")
         else:
-            print_status("CUDA toolkit not found", False)
+            print_status("CUDA toolkit not found in container", False)
     except FileNotFoundError:
-        print_status("NVCC not found", False)
-    
+        print_status("NVCC not found in container", False)
+
     try:
-        # Check nvidia-smi
+        # Check nvidia-smi (requires GPU access from host)
         result = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
         if result.returncode == 0:
             print_info("GPU information:")
@@ -71,11 +74,11 @@ def check_cuda_environment():
             for line in lines:
                 if 'NVIDIA' in line or 'GPU' in line or 'MiB' in line:
                     print(f"  {line}")
-            print_status("NVIDIA driver is working")
+            print_status("GPU access available")
         else:
-            print_status("nvidia-smi failed", False)
+            print_status("GPU access not available - will use CPU mode", False)
     except FileNotFoundError:
-        print_status("nvidia-smi not found", False)
+        print_status("nvidia-smi not available - will use CPU mode", False)
 
 
 def check_package_installation():
@@ -135,7 +138,7 @@ def check_pytorch_cuda():
             try:
                 x = torch.randn(100, 100).cuda()
                 y = torch.randn(100, 100).cuda()
-                z = torch.mm(x, y)
+                _ = torch.mm(x, y)  # Simple matrix multiplication test
                 print_status("CUDA operations test passed")
                 return True
             except Exception as e:
@@ -211,21 +214,21 @@ def test_basic_functionality():
     
     try:
         # Test data handler
-        from src.data_handler import ConversationDataHandler
+        from src.data_handler import ConversationDataHandler  # noqa: F401
         print_status("Data handler import")
-        
+
         # Test model setup
-        from src.model_setup import ModelSetup
+        from src.model_setup import ModelSetup  # noqa: F401
         print_status("Model setup import")
-        
+
         # Test training module
-        from src.training import CodeLlamaTrainer
+        from src.training import CodeLlamaTrainer  # noqa: F401
         print_status("Training module import")
-        
+
         # Test utilities
-        from src.utils import validate_model_output
+        from src.utils import validate_model_output  # noqa: F401
         print_status("Utilities import")
-        
+
         return True
         
     except Exception as e:

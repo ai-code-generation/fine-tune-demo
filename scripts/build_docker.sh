@@ -44,25 +44,22 @@ check_docker() {
     print_status "Docker is installed and running"
 }
 
-# Function to check NVIDIA Docker support
-check_nvidia_docker() {
-    print_header "Checking NVIDIA Docker support..."
-    
-    # Check if nvidia-docker2 or Docker with GPU support is available
-    if command -v nvidia-docker &> /dev/null; then
-        print_status "nvidia-docker found"
+# Function to check Docker GPU support (optional for self-contained image)
+check_docker_gpu_support() {
+    print_header "Checking Docker GPU support (optional)..."
+
+    print_status "This image is self-contained with CUDA toolkit included"
+    print_status "No host CUDA installation required!"
+
+    # Check if Docker supports --gpus flag (optional)
+    if docker run --rm --gpus all ubuntu:22.04 echo "GPU support available" &> /dev/null; then
+        print_status "Docker GPU support detected - GPU training will be available"
         return 0
+    else
+        print_warning "Docker GPU support not detected - will use CPU mode"
+        print_warning "For GPU support, ensure NVIDIA drivers are installed on host"
+        return 1
     fi
-    
-    # Check if Docker supports --gpus flag
-    if docker run --rm --gpus all nvidia/cuda:12.1-base-ubuntu22.04 nvidia-smi &> /dev/null; then
-        print_status "Docker GPU support detected"
-        return 0
-    fi
-    
-    print_warning "NVIDIA Docker support not detected. GPU training may not work."
-    print_warning "Please install nvidia-docker2 or ensure Docker supports --gpus flag"
-    return 1
 }
 
 # Function to check available GPU memory
@@ -269,7 +266,7 @@ echo "=============================================="
 
 # Check prerequisites
 check_docker
-check_nvidia_docker
+check_docker_gpu_support  # Optional check
 check_gpu_memory
 
 # Handle different modes

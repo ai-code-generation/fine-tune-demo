@@ -54,13 +54,20 @@ check_docker_compose() {
     print_status "Docker Compose is available"
 }
 
-# Function to check NVIDIA Docker support
-check_nvidia_docker() {
-    if command -v nvidia-docker &> /dev/null || docker run --rm --gpus all nvidia/cuda:11.0-base nvidia-smi &> /dev/null; then
-        print_status "NVIDIA Docker support detected"
+# Function to check Docker GPU support (optional)
+check_docker_gpu_support() {
+    print_status "Checking Docker GPU support (optional)..."
+
+    # Check if Docker supports --gpus flag
+    if docker run --rm --gpus all ubuntu:22.04 nvidia-smi &> /dev/null 2>&1; then
+        print_status "Docker GPU support detected - GPU training will be available"
         return 0
     else
-        print_warning "NVIDIA Docker support not detected. GPU training may not work."
+        print_warning "Docker GPU support not detected - will use CPU mode"
+        print_warning "For GPU support, ensure:"
+        print_warning "  1. NVIDIA drivers are installed on host"
+        print_warning "  2. Docker supports --gpus flag (Docker 19.03+)"
+        print_warning "  3. nvidia-container-toolkit is installed"
         return 1
     fi
 }
@@ -239,10 +246,15 @@ case "${1:-help}" in
         print_header "Setting up CodeLlama fine-tuning pipeline..."
         check_docker
         check_docker_compose
-        check_nvidia_docker
+        check_docker_gpu_support  # Optional check
         create_directories
         build_image
         print_status "Setup completed successfully!"
+        echo
+        print_status "The container includes:"
+        echo "  ✅ CUDA 12.1 toolkit (self-contained)"
+        echo "  ✅ All ML dependencies pre-installed"
+        echo "  ✅ No host CUDA installation required"
         echo
         print_status "Next steps:"
         echo "  1. Run '$0 sample-data' to create sample training data"

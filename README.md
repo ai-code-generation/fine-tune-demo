@@ -7,9 +7,10 @@ A comprehensive pipeline for fine-tuning CodeLlama models (7B and 13B) using Hug
 - Support for CodeLlama 7B and 13B models
 - YAML-based training data format with conversation structure
 - LoRA (Low-Rank Adaptation) for memory-efficient fine-tuning
-- Docker containerization for easy deployment
+- **Self-contained Docker with CUDA** - no host CUDA installation required
 - Automated model output management
 - Instruction-tuning format conversion
+- **CPU fallback mode** - works without GPU
 
 ## Project Structure
 
@@ -37,16 +38,18 @@ fine-tune-pipeline/
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker (Recommended - Self-Contained)
 
 **Prerequisites:**
-- Docker with GPU support (nvidia-docker2 or Docker 19.03+)
-- NVIDIA drivers installed on host system
+- Docker (any recent version)
+- NVIDIA drivers on host (optional, for GPU support)
+- **No CUDA installation required on host!**
 
-1. **Build the Docker image with all dependencies:**
+1. **Build the self-contained Docker image:**
    ```bash
    ./scripts/build_docker.sh
    ```
+   *This installs CUDA 12.1 and all dependencies inside the container*
 
 2. **Setup the environment:**
    ```bash
@@ -233,16 +236,33 @@ docker exec -it codellama-finetune python scripts/verify_installation.py
 ./scripts/docker_setup.sh cleanup
 ```
 
+### CPU-Only Mode
+
+If you don't have a GPU or want to test on CPU:
+
+```bash
+# Use CPU-only configuration
+docker-compose -f docker-compose.cpu.yml up -d
+
+# Access CPU container
+docker exec -it codellama-finetune-cpu bash
+
+# Train on CPU (slower but works)
+python train.py --model-config configs/model_configs/codellama_7b.yaml \
+                --train-data data/train.yaml
+```
+
 ### Docker Image Features
 
-The Docker image includes:
-- ✅ **CUDA 12.1** with full development toolkit
+The Docker image is **completely self-contained** and includes:
+- ✅ **CUDA 12.1 Toolkit** (installed in container, no host dependency)
 - ✅ **PyTorch 2.1.0** with CUDA support
 - ✅ **All ML dependencies** (Transformers, PEFT, Datasets, etc.)
 - ✅ **System utilities** (vim, htop, tmux, etc.)
 - ✅ **Automatic verification** of installation
 - ✅ **GPU memory optimization** settings
-- ✅ **Health checks** for CUDA availability
+- ✅ **Works without host CUDA installation**
+- ✅ **Fallback to CPU mode** if no GPU available
 
 ### Testing
 

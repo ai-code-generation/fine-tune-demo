@@ -1,50 +1,53 @@
-# Docker Setup Guide
+# Docker Setup Guide - Self-Contained CUDA
 
-This guide covers the complete Docker setup for the CodeLlama fine-tuning pipeline, including all requirements and CUDA installation.
+This guide covers the complete Docker setup for the CodeLlama fine-tuning pipeline with **self-contained CUDA installation**. No CUDA installation required on the host machine!
 
 ## Prerequisites
 
-### 1. NVIDIA GPU and Drivers
+### 1. Docker Only (Required)
+
+- **Docker** (any recent version)
+- **Docker Compose** (optional, for easier management)
+
+Install Docker:
+```bash
+# Linux
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Or use your package manager
+sudo apt-get install docker.io docker-compose
+```
+
+### 2. NVIDIA GPU and Drivers (Optional, for GPU acceleration)
 
 - **NVIDIA GPU** with compute capability 6.0+ (Pascal architecture or newer)
-- **NVIDIA drivers** version 450.80.02 or newer
+- **NVIDIA drivers** version 450.80.02 or newer (on host only)
 - **At least 8GB GPU memory** (recommended for CodeLlama 7B)
 
-Check your GPU:
+Check your GPU (if available):
 ```bash
 nvidia-smi
 ```
 
-### 2. Docker with GPU Support
+**Note:** The container includes its own CUDA toolkit, so you don't need CUDA installed on the host!
 
-**Option A: Docker with built-in GPU support (Docker 19.03+)**
+### 3. Docker GPU Support (Optional)
+
+For GPU acceleration, install NVIDIA Container Toolkit:
+
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install NVIDIA Container Toolkit
+# Add NVIDIA package repositories
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 
-sudo apt-get update && sudo apt-get install -y nvidia-docker2
+# Install nvidia-container-toolkit
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
 ```
 
-**Option B: nvidia-docker2 (legacy)**
-```bash
-# Install Docker first, then:
-sudo apt-get install nvidia-docker2
-sudo systemctl restart docker
-```
-
-### 3. Docker Compose
-
-```bash
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-```
+**Without GPU:** The container will automatically fall back to CPU mode.
 
 ## Quick Setup
 
@@ -89,12 +92,12 @@ The build script handles everything automatically:
 ```
 
 This will:
-- ✅ Check Docker and NVIDIA Docker support
-- ✅ Build image with CUDA 12.1 and all dependencies
+- ✅ Check Docker installation
+- ✅ Build self-contained image with CUDA 12.1 toolkit
 - ✅ Install PyTorch with CUDA support
 - ✅ Install all ML libraries (Transformers, PEFT, etc.)
 - ✅ Verify the installation
-- ✅ Test CUDA functionality
+- ✅ Test functionality (GPU or CPU mode)
 
 **Build options:**
 ```bash
@@ -148,7 +151,7 @@ This checks:
 
 **Base System:**
 - Ubuntu 22.04 LTS
-- CUDA 12.1 development toolkit
+- **CUDA 12.1 Toolkit** (self-contained, no host dependency)
 - Python 3.10 with development headers
 - Build tools (gcc, cmake, ninja)
 
@@ -158,13 +161,18 @@ This checks:
 - PEFT 0.6.2
 - Datasets 2.14.6
 - BitsAndBytes 0.41.3
-- All other requirements from requirements.txt
+- All other ML dependencies
 
 **System Utilities:**
 - vim, nano (text editors)
 - htop, tmux (system monitoring)
 - git, wget, curl (utilities)
 - tree (directory visualization)
+
+**Key Features:**
+- ✅ **No host CUDA required** - everything is self-contained
+- ✅ **Automatic GPU/CPU detection** - works in both modes
+- ✅ **Complete ML stack** - ready to use out of the box
 
 ### Volume Mounts
 

@@ -7,8 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: codellama-finetune
 
-    # GPU support - multiple methods for compatibility
-    runtime: nvidia  # For older Docker versions
+    # GPU support - works without host CUDA installation
+    # The container includes its own CUDA toolkit
     deploy:
       resources:
         reservations:
@@ -29,6 +29,7 @@ services:
       - WANDB_DISABLED=true  # Disable wandb by default
       - CUDA_LAUNCH_BLOCKING=1  # For debugging CUDA issues
       - PYTHONPATH=/workspace/src
+      - FORCE_CUDA=1  # Force CUDA compilation if needed
     
     # Volume mounts
     volumes:
@@ -75,9 +76,9 @@ services:
     # Restart policy
     restart: unless-stopped
 
-    # Health check
+    # Health check - works without requiring GPU
     healthcheck:
-      test: ["CMD", "python", "-c", "import torch; assert torch.cuda.is_available()"]
+      test: ["CMD", "python", "-c", "import torch, transformers, peft; print('Container healthy')"]
       interval: 30s
       timeout: 10s
       retries: 3

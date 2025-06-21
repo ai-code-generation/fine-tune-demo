@@ -1,0 +1,98 @@
+# Docker Compose configuration for CPU-only mode
+# Use this if you don't have GPU or want to test on CPU
+version: '3.8'
+
+services:
+  codellama-finetune-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codellama-finetune-cpu
+    
+    # No GPU configuration - CPU only
+    
+    # Environment variables for CPU mode
+    environment:
+      - CUDA_VISIBLE_DEVICES=""  # Disable GPU
+      - HF_HOME=/workspace/cache
+      - TRANSFORMERS_CACHE=/workspace/cache
+      - HF_DATASETS_CACHE=/workspace/cache
+      - TORCH_HOME=/workspace/cache
+      - WANDB_DISABLED=true
+      - PYTHONPATH=/workspace/src
+      - FORCE_CPU=1  # Force CPU mode
+    
+    # Volume mounts
+    volumes:
+      # Mount output directory to persist trained models
+      - ./output:/workspace/output
+      
+      # Mount data directory for training data
+      - ./data:/workspace/data
+      
+      # Mount configs for easy modification
+      - ./configs:/workspace/configs
+      
+      # Mount cache directory to persist downloaded models
+      - model_cache:/workspace/cache
+      
+      # Mount logs directory
+      - training_logs:/workspace/logs
+      
+      # Mount scripts for easy modification during development
+      - ./scripts:/workspace/scripts
+    
+    # Resource limits for CPU mode
+    deploy:
+      resources:
+        limits:
+          memory: 16G  # Adjust based on your system
+          cpus: '8'    # Adjust based on your CPU cores
+        reservations:
+          memory: 4G
+          cpus: '2'
+    
+    # Shared memory size for PyTorch DataLoader
+    shm_size: '2gb'
+    
+    # Working directory
+    working_dir: /workspace
+    
+    # Keep container running
+    tty: true
+    stdin_open: true
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check for CPU mode
+    healthcheck:
+      test: ["CMD", "python", "-c", "import torch, transformers, peft; print('CPU mode container healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # TensorBoard service for monitoring training (CPU mode)
+  tensorboard-cpu:
+    image: tensorflow/tensorflow:latest
+    container_name: codellama-tensorboard-cpu
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./output:/logs
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    profiles:
+      - tensorboard
+
+# Named volumes for persistence
+volumes:
+  model_cache:
+    driver: local
+  training_logs:
+    driver: local
+
+# Networks
+networks:
+  default:
+    name: codellama-network-cpu
