@@ -127,7 +127,7 @@ install_nvidia_docker() {
     fi
     
     # Check if nvidia-docker2 is already installed
-    if docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi &> /dev/null; then
+    if docker run --rm --gpus all nvidia/cuda:11.8-devel-ubuntu22.04 nvidia-smi &> /dev/null; then
         print_success "NVIDIA Docker runtime is already working"
         return 0
     fi
@@ -144,7 +144,7 @@ install_nvidia_docker() {
     sudo systemctl restart docker
     
     # Test NVIDIA Docker
-    if docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi &> /dev/null; then
+    if docker run --rm --gpus all nvidia/cuda:11.8-devel-ubuntu22.04 nvidia-smi &> /dev/null; then
         print_success "NVIDIA Docker runtime installed successfully"
     else
         print_error "NVIDIA Docker installation failed"
@@ -226,7 +226,7 @@ test_docker() {
     
     # Test GPU support if available
     if [ "$OS" == "linux" ] && command -v nvidia-smi &> /dev/null; then
-        if docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi &> /dev/null; then
+        if docker run --rm --gpus all nvidia/cuda:11.8-devel-ubuntu22.04 nvidia-smi &> /dev/null; then
             print_success "GPU support is working"
         else
             print_warning "GPU support test failed"

@@ -131,15 +131,88 @@ check_prerequisites() {
 # Function to build Docker image
 build_image() {
     print_status "Building Docker image: $IMAGE_NAME"
-    
-    docker build -t "$IMAGE_NAME" .
-    
-    if [ $? -eq 0 ]; then
-        print_success "Docker image built successfully"
-    else
-        print_error "Failed to build Docker image"
-        exit 1
+
+    # First, try to build with the main Dockerfile
+    print_status "Attempting to build with main Dockerfile..."
+    if docker build -t "$IMAGE_NAME" . 2>/dev/null; then
+        print_success "Docker image built successfully with main Dockerfile"
+        return 0
     fi
+
+    print_warning "Main Dockerfile failed. Checking CUDA image availability..."
+
+    # Check if the CUDA image checker script exists and run it
+    if [ -f "scripts/check_cuda_images.sh" ]; then
+        chmod +x scripts/check_cuda_images.sh
+        print_status "Running CUDA image checker..."
+        ./scripts/check_cuda_images.sh
+    fi
+
+    # Try alternative Dockerfile if it exists
+    if [ -f "Dockerfile.alternative" ]; then
+        print_status "Attempting to build with alternative Dockerfile..."
+        if docker build -f Dockerfile.alternative -t "$IMAGE_NAME" .; then
+            print_success "Docker image built successfully with alternative Dockerfile"
+            return 0
+        fi
+    fi
+
+    # Try with NVIDIA Container Registry
+    print_status "Attempting to build with NVIDIA Container Registry base image..."
+
+    # Create temporary Dockerfile with nvcr.io base
+    cat > Dockerfile.nvcr << EOF
+FROM nvcr.io/nvidia/cuda:11.8-devel-ubuntu22.04 as base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=\${CUDA_HOME}/bin:\${PATH}
+ENV LD_LIBRARY_PATH=\${CUDA_HOME}/lib64:\${LD_LIBRARY_PATH}
+
+RUN apt-get update && apt-get install -y \\
+    python3 python3-pip python3-dev git wget curl build-essential cmake \\
+    libsndfile1 ffmpeg sox libsox-fmt-all && rm -rf /var/lib/apt/lists/*
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN python -m pip install --upgrade pip
+RUN pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+RUN pip install nemo_toolkit[all]==1.20.0
+RUN pip install transformers pytorch-lightning omegaconf hydra-core wandb tensorboard
+
+WORKDIR /workspace
+COPY requirements.txt .
+RUN pip install -r requirements.txt || true
+COPY . .
+RUN pip install -e . || true
+
+RUN mkdir -p /workspace/data /workspace/logs /workspace/checkpoints /workspace/deploy /workspace/outputs
+RUN useradd -m -u 1000 nemo_user && chown -R nemo_user:nemo_user /workspace
+USER nemo_user
+
+ENV PYTHONPATH=/workspace/src:\$PYTHONPATH
+RUN mkdir -p /workspace/.cache/nemo /workspace/.cache/huggingface /workspace/.cache/wandb
+
+EXPOSE 8888 6006
+CMD ["/bin/bash"]
+EOF
+
+    if docker build -f Dockerfile.nvcr -t "$IMAGE_NAME" .; then
+        print_success "Docker image built successfully with NVIDIA Container Registry"
+        rm -f Dockerfile.nvcr
+        return 0
+    fi
+
+    rm -f Dockerfile.nvcr
+
+    print_error "All Docker build attempts failed!"
+    print_error "Please check:"
+    print_error "1. Internet connectivity"
+    print_error "2. Docker Hub access"
+    print_error "3. NVIDIA Docker installation"
+    print_error ""
+    print_error "Try running: ./scripts/check_cuda_images.sh"
+    exit 1
 }
 
 # Function to run fine-tuning

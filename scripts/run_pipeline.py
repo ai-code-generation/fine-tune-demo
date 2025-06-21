@@ -5,21 +5,35 @@ Main pipeline script for fine-tuning language models with NeMo.
 
 import argparse
 import logging
+import os
 import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Add src to path for imports
+project_root = Path(__file__).parent.parent
+src_path = project_root / "src"
+sys.path.insert(0, str(src_path))
 
-from training.trainer import NeMoTrainer
-from training.lora_config import LoRAConfig
-from models.model_config import ModelConfig
-from models.model_factory import ModelFactory
-from evaluation.evaluator import ModelEvaluator
-from deployment.deployer import ModelDeployer
-from deployment.converter import ModelConverter
+# Import pipeline components
+try:
+    from training.trainer import NeMoTrainer
+    from training.lora_config import LoRAConfig
+    from models.model_config import ModelConfig
+    from models.model_factory import ModelFactory
+    from evaluation.evaluator import ModelEvaluator
+    from deployment.deployer import ModelDeployer
+    from deployment.converter import ModelConverter
+except ImportError as e:
+    print(f"Import error: {e}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Python path: {sys.path}")
+    print(f"Source path: {src_path}")
+    print(f"Source path exists: {src_path.exists()}")
+    if src_path.exists():
+        print(f"Contents of src: {list(src_path.iterdir())}")
+    raise
 
 # Setup logging
 logging.basicConfig(

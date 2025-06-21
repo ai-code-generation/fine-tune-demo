@@ -1,57 +1,79 @@
-# Multi-stage Dockerfile for NeMo Fine-Tuning Pipeline
-FROM nvidia/cuda:11.8-devel-ubuntu20.04 as base
+# Dockerfile for NeMo Fine-Tuning Pipeline
+# Robust build with enhanced dependency management
+FROM ubuntu:22.04 as base
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-ENV CUDA_HOME=/usr/local/cuda
-ENV PATH=${CUDA_HOME}/bin:${PATH}
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-dev \
+    python3-venv \
     git \
     wget \
     curl \
     build-essential \
     cmake \
+    gcc \
+    g++ \
+    make \
+    ninja-build \
     libsndfile1 \
+    libsndfile1-dev \
     ffmpeg \
     sox \
     libsox-fmt-all \
+    software-properties-common \
+    gnupg2 \
+    pkg-config \
+    libblas-dev \
+    liblapack-dev \
+    libatlas-base-dev \
+    gfortran \
     && rm -rf /var/lib/apt/lists/*
+
+# Install CUDA manually
+RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb && \
+    dpkg -i cuda-keyring_1.0-1_all.deb && \
+    apt-get update && \
+    apt-get -y install cuda-toolkit-11-8 && \
+    rm cuda-keyring_1.0-1_all.deb && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set CUDA environment variables
+ENV CUDA_HOME=/usr/local/cuda-11.8
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 
 # Create symbolic link for python
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# Upgrade pip
-RUN python -m pip install --upgrade pip
+# Upgrade pip and install build tools
+RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA support
-RUN pip install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+# Install build dependencies required for NeMo compilation
+RUN pip install \
+    Cython \
+    pybind11 \
+    numpy \
+    packaging
+
+# Install PyTorch with CUDA support (updated to 2.1+ for better compatibility)
+RUN pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
 
 # Install NeMo and dependencies
 RUN pip install nemo_toolkit[all]==1.20.0
 
-# Install additional ML dependencies
+# Install additional ML dependencies (compatible with NeMo requirements)
 RUN pip install \
-    transformers>=4.30.0 \
-    pytorch-lightning>=2.0.0 \
-    omegaconf>=2.3.0 \
-    hydra-core>=1.3.0 \
-    wandb \
-    tensorboard \
     datasets \
     evaluate \
     rouge-score \
     sacrebleu \
     nltk \
-    scikit-learn \
-    pandas \
-    numpy \
     matplotlib \
     seaborn \
     jupyter \
@@ -66,18 +88,23 @@ RUN pip install \
     psutil \
     gpustat
 
+# Note: apex and flash-attn are excluded from Docker build due to compilation issues
+# They can be installed manually if needed using the provided scripts
+
 # Set working directory
 WORKDIR /workspace
-
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install -r requirements.txt
 
 # Copy the entire pipeline
 COPY . .
 
-# Install the pipeline package
-RUN pip install -e .
+# Install the pipeline package dependencies using Docker-compatible requirements
+RUN pip install -r requirements-docker.txt
+
+# Install the pipeline package without dependencies (since we installed them separately)
+RUN pip install -e . --no-deps
+
+# Make scripts executable
+RUN chmod +x scripts/*.sh scripts/*.py
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /workspace/data \
