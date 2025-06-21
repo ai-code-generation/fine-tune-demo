@@ -16,9 +16,16 @@ except ImportError:
     TORCH_AVAILABLE = False
     logging.warning("PyTorch not available. Evaluation will be limited.")
 
-from .metrics import MetricsCalculator
-from ..data.data_processor import DataProcessor
-from ..data.instruction_formatter import InstructionFormatter
+try:
+    # Try relative imports first (when used as a package)
+    from .metrics import MetricsCalculator
+    from ..data.data_processor import DataProcessor
+    from ..data.instruction_formatter import InstructionFormatter
+except ImportError:
+    # Fall back to absolute imports (when run directly)
+    from evaluation.metrics import MetricsCalculator
+    from data.data_processor import DataProcessor
+    from data.instruction_formatter import InstructionFormatter
 
 logger = logging.getLogger(__name__)
 

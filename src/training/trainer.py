@@ -21,12 +21,22 @@ except ImportError:
     NEMO_AVAILABLE = False
     logging.warning("NeMo or PyTorch Lightning not available. Training will be limited.")
 
-from ..models.model_config import ModelConfig
-from ..models.model_factory import ModelFactory
-from .lora_config import LoRAConfig
-from ..data.data_processor import DataProcessor
-from ..data.instruction_formatter import InstructionFormatter
-from ..data.dataset_builder import DatasetBuilder
+try:
+    # Try relative imports first (when used as a package)
+    from ..models.model_config import ModelConfig
+    from ..models.model_factory import ModelFactory
+    from .lora_config import LoRAConfig
+    from ..data.data_processor import DataProcessor
+    from ..data.instruction_formatter import InstructionFormatter
+    from ..data.dataset_builder import DatasetBuilder
+except ImportError:
+    # Fall back to absolute imports (when run directly)
+    from models.model_config import ModelConfig
+    from models.model_factory import ModelFactory
+    from training.lora_config import LoRAConfig
+    from data.data_processor import DataProcessor
+    from data.instruction_formatter import InstructionFormatter
+    from data.dataset_builder import DatasetBuilder
 
 logger = logging.getLogger(__name__)
 

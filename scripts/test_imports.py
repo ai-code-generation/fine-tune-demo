@@ -59,6 +59,21 @@ def test_imports():
         ("deployment.deployer", "ModelDeployer"),
         ("deployment.converter", "ModelConverter"),
     ]
+
+    print("\n🔍 Testing pipeline module imports...")
+
+    # Test individual modules first
+    individual_modules = [
+        "training", "models", "data", "evaluation", "deployment"
+    ]
+
+    for module_name in individual_modules:
+        try:
+            module = __import__(module_name)
+            print(f"✅ {module_name} module imported successfully")
+        except ImportError as e:
+            print(f"❌ {module_name} module import failed: {e}")
+            return False
     
     for module_name, class_name in modules_to_test:
         try:
