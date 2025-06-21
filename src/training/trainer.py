@@ -218,6 +218,13 @@ class NeMoTrainer:
         if not FULL_TRAINING_AVAILABLE or MegatronGPTModel is None:
             raise RuntimeError("NeMo Megatron components not available")
 
+        # Check for HuggingFace authentication if needed
+        if base_model_path:
+            auth_result = self._check_hf_auth_needed(base_model_path)
+            if auth_result and isinstance(auth_result, str):
+                # Set up HuggingFace authentication
+                self._setup_hf_authentication(auth_result)
+
         # Update model config with LoRA settings
         lora_nemo_config = self.lora_config.create_nemo_lora_config()
         self.config.model.peft = lora_nemo_config
@@ -233,11 +240,20 @@ class NeMoTrainer:
         else:
             # Create new model or load from pretrained
             if base_model_path:
-                # Load from pretrained model
-                self.model = MegatronGPTModel.from_pretrained(
-                    model_name=base_model_path,
-                    override_config_path=self.config
-                )
+                try:
+                    # Load from pretrained model
+                    self.model = MegatronGPTModel.from_pretrained(
+                        model_name=base_model_path,
+                        override_config_path=self.config
+                    )
+                    logger.info(f"✅ Successfully loaded NeMo model: {base_model_path}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to load NeMo model {base_model_path}: {e}")
+                    logger.info("🔄 Falling back to Transformers mode...")
+                    # Fall back to transformers mode
+                    self.training_mode = "transformers"
+                    self._setup_transformers_model(base_model_path, checkpoint_path)
+                    return
             else:
                 # Create from config
                 self.model = MegatronGPTModel(cfg=self.config.model)
@@ -276,32 +292,49 @@ class NeMoTrainer:
 
         logger.info(f"Loading Transformers model: {model_name}")
 
+        # Check for HuggingFace authentication if needed
+        auth_result = self._check_hf_auth_needed(model_name)
+        auth_kwargs = {}
+        if auth_result and isinstance(auth_result, str):
+            # Set up HuggingFace authentication
+            self._setup_hf_authentication(auth_result)
+            auth_kwargs['token'] = auth_result
+
         # Load model and tokenizer
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            logger.info(f"🔄 Loading tokenizer: {model_name}")
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, **auth_kwargs)
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
 
+            logger.info(f"🔄 Loading model: {model_name}")
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto" if torch.cuda.is_available() else None
+                device_map="auto" if torch.cuda.is_available() else None,
+                **auth_kwargs
             )
 
-            logger.info(f"Setup Transformers {self.model_type} {self.model_size} model")
+            logger.info(f"✅ Successfully loaded Transformers model: {model_name}")
+            logger.info(f"   Model type: {type(self.model).__name__}")
+            logger.info(f"   Tokenizer vocab size: {len(self.tokenizer)}")
 
         except Exception as e:
-            logger.error(f"Failed to load model {model_name}: {e}")
+            logger.error(f"❌ Failed to load model {model_name}: {e}")
             # Fallback to an even smaller model
             fallback_model = "microsoft/DialoGPT-small"
-            logger.info(f"Trying fallback model: {fallback_model}")
+            logger.info(f"🔄 Trying fallback model: {fallback_model}")
 
-            self.tokenizer = AutoTokenizer.from_pretrained(fallback_model)
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
+            try:
+                self.tokenizer = AutoTokenizer.from_pretrained(fallback_model)
+                if self.tokenizer.pad_token is None:
+                    self.tokenizer.pad_token = self.tokenizer.eos_token
 
-            self.model = AutoModelForCausalLM.from_pretrained(fallback_model)
-            logger.info(f"Using fallback model: {fallback_model}")
+                self.model = AutoModelForCausalLM.from_pretrained(fallback_model)
+                logger.info(f"✅ Using fallback model: {fallback_model}")
+            except Exception as fallback_error:
+                logger.error(f"❌ Even fallback model failed: {fallback_error}")
+                raise RuntimeError(f"Could not load any model. Original error: {e}, Fallback error: {fallback_error}")
     
     def setup_data(self, 
                   train_file: Union[str, Path],
@@ -535,3 +568,51 @@ class NeMoTrainer:
             info["val_dataset_size"] = len(self.val_dataset)
         
         return info
+
+    def _check_hf_auth_needed(self, model_name: str) -> Union[bool, str]:
+        """Check if HuggingFace authentication is needed and available."""
+        import os
+
+        # Check if we have a HuggingFace token
+        hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_HUB_TOKEN')
+
+        # Models that typically require authentication
+        gated_models = [
+            "meta-llama/",
+            "codellama/",
+            "facebook/llama",
+        ]
+
+        needs_auth = any(gated in model_name for gated in gated_models)
+        has_token = hf_token is not None and hf_token.strip() != ""
+
+        if needs_auth:
+            if has_token:
+                logger.info(f"🔑 Using HuggingFace token for gated model: {model_name}")
+                return hf_token
+            else:
+                logger.warning(f"⚠️  Model {model_name} requires authentication, but no HF_TOKEN found")
+                logger.warning(f"   Set HF_TOKEN environment variable to access gated models")
+                return False
+
+        # Non-gated model, no auth needed
+        return False
+
+    def _setup_hf_authentication(self, token: str) -> None:
+        """Setup HuggingFace authentication using the provided token."""
+        try:
+            # Try to use huggingface_hub login if available
+            try:
+                from huggingface_hub import login
+                login(token=token, add_to_git_credential=False)
+                logger.info("🔑 Successfully authenticated with HuggingFace Hub")
+            except ImportError:
+                # Fallback: just set the environment variable
+                import os
+                os.environ['HF_TOKEN'] = token
+                os.environ['HUGGINGFACE_HUB_TOKEN'] = token
+                logger.info("🔑 Set HuggingFace token in environment variables")
+
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to setup HuggingFace authentication: {e}")
+            logger.warning("   Model loading may fail for gated repositories")

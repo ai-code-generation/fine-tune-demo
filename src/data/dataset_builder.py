@@ -3,6 +3,7 @@ Dataset builder for NeMo training.
 """
 
 import json
+import os
 from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
 import torch
@@ -93,10 +94,18 @@ class DatasetBuilder:
             Configured tokenizer
         """
         try:
+            # Check for HuggingFace authentication
+            auth_kwargs = {}
+            hf_token = os.getenv('HF_TOKEN') or os.getenv('HUGGINGFACE_HUB_TOKEN')
+            if hf_token and hf_token.strip():
+                auth_kwargs['token'] = hf_token
+                logger.info(f"🔑 Using HuggingFace token for tokenizer: {tokenizer_name_or_path}")
+
             self.tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_name_or_path,
                 trust_remote_code=True,
-                use_fast=True
+                use_fast=True,
+                **auth_kwargs
             )
             
             # Configure special tokens based on model type
