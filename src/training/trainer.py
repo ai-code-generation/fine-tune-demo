@@ -21,6 +21,17 @@ except ImportError:
     NEMO_AVAILABLE = False
     logging.warning("NeMo or PyTorch Lightning not available. Training will be limited.")
 
+# Import handling for both package and direct execution
+import sys
+import os
+from pathlib import Path
+
+# Add the src directory to Python path if not already there
+current_dir = Path(__file__).parent
+src_dir = current_dir.parent
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
 try:
     # Try relative imports first (when used as a package)
     from ..models.model_config import ModelConfig
@@ -30,13 +41,46 @@ try:
     from ..data.instruction_formatter import InstructionFormatter
     from ..data.dataset_builder import DatasetBuilder
 except ImportError:
-    # Fall back to absolute imports (when run directly)
-    from models.model_config import ModelConfig
-    from models.model_factory import ModelFactory
-    from training.lora_config import LoRAConfig
-    from data.data_processor import DataProcessor
-    from data.instruction_formatter import InstructionFormatter
-    from data.dataset_builder import DatasetBuilder
+    try:
+        # Fall back to absolute imports from src directory
+        from models.model_config import ModelConfig
+        from models.model_factory import ModelFactory
+        from training.lora_config import LoRAConfig
+        from data.data_processor import DataProcessor
+        from data.instruction_formatter import InstructionFormatter
+        from data.dataset_builder import DatasetBuilder
+    except ImportError as e:
+        # Final fallback - try importing with explicit path manipulation
+        import importlib.util
+
+        def import_from_path(module_path, module_name):
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+
+        # Import modules directly from their file paths
+        models_dir = src_dir / "models"
+        data_dir = src_dir / "data"
+        training_dir = src_dir / "training"
+
+        model_config_module = import_from_path(models_dir / "model_config.py", "model_config")
+        ModelConfig = model_config_module.ModelConfig
+
+        model_factory_module = import_from_path(models_dir / "model_factory.py", "model_factory")
+        ModelFactory = model_factory_module.ModelFactory
+
+        lora_config_module = import_from_path(training_dir / "lora_config.py", "lora_config")
+        LoRAConfig = lora_config_module.LoRAConfig
+
+        data_processor_module = import_from_path(data_dir / "data_processor.py", "data_processor")
+        DataProcessor = data_processor_module.DataProcessor
+
+        instruction_formatter_module = import_from_path(data_dir / "instruction_formatter.py", "instruction_formatter")
+        InstructionFormatter = instruction_formatter_module.InstructionFormatter
+
+        dataset_builder_module = import_from_path(data_dir / "dataset_builder.py", "dataset_builder")
+        DatasetBuilder = dataset_builder_module.DatasetBuilder
 
 logger = logging.getLogger(__name__)
 

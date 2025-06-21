@@ -11,29 +11,84 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Add src to path for imports
+# Setup robust import handling
 project_root = Path(__file__).parent.parent
 src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
+
+# Ensure src is in Python path
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+# Also add the project root to handle different import scenarios
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+def import_pipeline_modules():
+    """Import pipeline modules with multiple fallback strategies."""
+    try:
+        # Strategy 1: Direct imports from src
+        from training.trainer import NeMoTrainer
+        from training.lora_config import LoRAConfig
+        from models.model_config import ModelConfig
+        from models.model_factory import ModelFactory
+        from evaluation.evaluator import ModelEvaluator
+        from deployment.deployer import ModelDeployer
+        from deployment.converter import ModelConverter
+        return NeMoTrainer, LoRAConfig, ModelConfig, ModelFactory, ModelEvaluator, ModelDeployer, ModelConverter
+    except ImportError as e1:
+        print(f"Strategy 1 failed: {e1}")
+        try:
+            # Strategy 2: Import from src prefix
+            from src.training.trainer import NeMoTrainer
+            from src.training.lora_config import LoRAConfig
+            from src.models.model_config import ModelConfig
+            from src.models.model_factory import ModelFactory
+            from src.evaluation.evaluator import ModelEvaluator
+            from src.deployment.deployer import ModelDeployer
+            from src.deployment.converter import ModelConverter
+            return NeMoTrainer, LoRAConfig, ModelConfig, ModelFactory, ModelEvaluator, ModelDeployer, ModelConverter
+        except ImportError as e2:
+            print(f"Strategy 2 failed: {e2}")
+            # Strategy 3: Direct file imports
+            import importlib.util
+
+            def import_from_file(file_path, module_name):
+                spec = importlib.util.spec_from_file_location(module_name, file_path)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+                return module
+
+            try:
+                # Import modules directly from files
+                trainer_module = import_from_file(src_path / "training" / "trainer.py", "trainer")
+                lora_module = import_from_file(src_path / "training" / "lora_config.py", "lora_config")
+                model_config_module = import_from_file(src_path / "models" / "model_config.py", "model_config")
+                model_factory_module = import_from_file(src_path / "models" / "model_factory.py", "model_factory")
+                evaluator_module = import_from_file(src_path / "evaluation" / "evaluator.py", "evaluator")
+                deployer_module = import_from_file(src_path / "deployment" / "deployer.py", "deployer")
+                converter_module = import_from_file(src_path / "deployment" / "converter.py", "converter")
+
+                return (trainer_module.NeMoTrainer, lora_module.LoRAConfig,
+                       model_config_module.ModelConfig, model_factory_module.ModelFactory,
+                       evaluator_module.ModelEvaluator, deployer_module.ModelDeployer,
+                       converter_module.ModelConverter)
+            except Exception as e3:
+                print(f"Strategy 3 failed: {e3}")
+                print(f"Current working directory: {os.getcwd()}")
+                print(f"Python path: {sys.path}")
+                print(f"Source path: {src_path}")
+                print(f"Source path exists: {src_path.exists()}")
+                if src_path.exists():
+                    print(f"Contents of src: {list(src_path.iterdir())}")
+                raise ImportError(f"All import strategies failed. Last error: {e3}")
 
 # Import pipeline components
 try:
-    from training.trainer import NeMoTrainer
-    from training.lora_config import LoRAConfig
-    from models.model_config import ModelConfig
-    from models.model_factory import ModelFactory
-    from evaluation.evaluator import ModelEvaluator
-    from deployment.deployer import ModelDeployer
-    from deployment.converter import ModelConverter
+    NeMoTrainer, LoRAConfig, ModelConfig, ModelFactory, ModelEvaluator, ModelDeployer, ModelConverter = import_pipeline_modules()
 except ImportError as e:
-    print(f"Import error: {e}")
-    print(f"Current working directory: {os.getcwd()}")
-    print(f"Python path: {sys.path}")
-    print(f"Source path: {src_path}")
-    print(f"Source path exists: {src_path.exists()}")
-    if src_path.exists():
-        print(f"Contents of src: {list(src_path.iterdir())}")
-    raise
+    print(f"Failed to import pipeline modules: {e}")
+    sys.exit(1)
 
 # Setup logging
 logging.basicConfig(
