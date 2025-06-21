@@ -28,13 +28,34 @@ except ImportError:
     logging.warning("NeMo not available. Training will be limited.")
 
 # Import specific NeMo components only when needed
+MegatronGPTModel = None
+NLPDDPStrategy = None
+hydra_runner = None
+
 if NEMO_AVAILABLE:
     try:
         from nemo.collections.nlp.models.language_modeling.megatron_gpt_model import MegatronGPTModel
         from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
         from nemo.core.config import hydra_runner
+        MEGATRON_AVAILABLE = True
     except ImportError as e:
         logging.warning(f"Some NeMo components not available: {e}")
+        MEGATRON_AVAILABLE = False
+else:
+    MEGATRON_AVAILABLE = False
+
+# Fallback imports for basic functionality
+try:
+    from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+    from transformers import DataCollatorForLanguageModeling
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    logging.warning("Transformers not available. Limited functionality.")
+
+# Overall training capability
+FULL_TRAINING_AVAILABLE = NEMO_AVAILABLE and PYTORCH_LIGHTNING_AVAILABLE and MEGATRON_AVAILABLE
+BASIC_TRAINING_AVAILABLE = TRANSFORMERS_AVAILABLE and PYTORCH_LIGHTNING_AVAILABLE
 
 # Overall availability check
 TRAINING_AVAILABLE = NEMO_AVAILABLE and PYTORCH_LIGHTNING_AVAILABLE
@@ -118,13 +139,26 @@ class NeMoTrainer:
             model_size: Size of model (7b, 8b, 13b, etc.)
             config_path: Optional path to custom configuration
         """
-        if not TRAINING_AVAILABLE:
+        # Check what training capabilities are available
+        if not FULL_TRAINING_AVAILABLE and not BASIC_TRAINING_AVAILABLE:
             missing = []
             if not NEMO_AVAILABLE:
                 missing.append("NeMo")
             if not PYTORCH_LIGHTNING_AVAILABLE:
                 missing.append("PyTorch Lightning")
-            raise RuntimeError(f"Required packages not available: {', '.join(missing)}")
+            if not TRANSFORMERS_AVAILABLE:
+                missing.append("Transformers")
+            raise RuntimeError(f"No training capabilities available. Missing: {', '.join(missing)}")
+
+        # Determine training mode
+        if FULL_TRAINING_AVAILABLE:
+            self.training_mode = "nemo"
+            logger.info("Using full NeMo training with Megatron models")
+        elif BASIC_TRAINING_AVAILABLE:
+            self.training_mode = "transformers"
+            logger.info("Using basic Transformers training (NeMo components not fully available)")
+        else:
+            raise RuntimeError("No suitable training backend available")
         
         self.model_type = model_type.lower()
         self.model_size = model_size.lower()
@@ -157,46 +191,117 @@ class NeMoTrainer:
         self.config = OmegaConf.merge(self.config, custom_config)
         logger.info(f"Applied custom configuration from {config_path}")
     
-    def setup_model(self, 
+    def setup_model(self,
                    base_model_path: Optional[str] = None,
                    checkpoint_path: Optional[str] = None) -> None:
         """
         Setup the model for training.
-        
+
         Args:
             base_model_path: Path to base model or HuggingFace model name
             checkpoint_path: Path to existing checkpoint to resume from
         """
         try:
-            # Update model config with LoRA settings
-            lora_nemo_config = self.lora_config.create_nemo_lora_config()
-            self.config.model.peft = lora_nemo_config
-            
-            # Set base model path if provided
-            if base_model_path:
-                self.config.model.tokenizer.type = base_model_path
-            
-            if checkpoint_path and Path(checkpoint_path).exists():
-                # Resume from checkpoint
-                self.model = MegatronGPTModel.restore_from(checkpoint_path)
-                logger.info(f"Resumed model from checkpoint: {checkpoint_path}")
+            if self.training_mode == "nemo":
+                self._setup_nemo_model(base_model_path, checkpoint_path)
+            elif self.training_mode == "transformers":
+                self._setup_transformers_model(base_model_path, checkpoint_path)
             else:
-                # Create new model or load from pretrained
-                if base_model_path:
-                    # Load from pretrained model
-                    self.model = MegatronGPTModel.from_pretrained(
-                        model_name=base_model_path,
-                        override_config_path=self.config
-                    )
-                else:
-                    # Create from config
-                    self.model = MegatronGPTModel(cfg=self.config.model)
-                
-                logger.info(f"Setup {self.model_type} {self.model_size} model")
-            
+                raise RuntimeError(f"Unknown training mode: {self.training_mode}")
+
         except Exception as e:
             logger.error(f"Failed to setup model: {e}")
             raise
+
+    def _setup_nemo_model(self, base_model_path: Optional[str], checkpoint_path: Optional[str]) -> None:
+        """Setup NeMo Megatron model."""
+        if not FULL_TRAINING_AVAILABLE or MegatronGPTModel is None:
+            raise RuntimeError("NeMo Megatron components not available")
+
+        # Update model config with LoRA settings
+        lora_nemo_config = self.lora_config.create_nemo_lora_config()
+        self.config.model.peft = lora_nemo_config
+
+        # Set base model path if provided
+        if base_model_path:
+            self.config.model.tokenizer.type = base_model_path
+
+        if checkpoint_path and Path(checkpoint_path).exists():
+            # Resume from checkpoint
+            self.model = MegatronGPTModel.restore_from(checkpoint_path)
+            logger.info(f"Resumed NeMo model from checkpoint: {checkpoint_path}")
+        else:
+            # Create new model or load from pretrained
+            if base_model_path:
+                # Load from pretrained model
+                self.model = MegatronGPTModel.from_pretrained(
+                    model_name=base_model_path,
+                    override_config_path=self.config
+                )
+            else:
+                # Create from config
+                self.model = MegatronGPTModel(cfg=self.config.model)
+
+            logger.info(f"Setup NeMo {self.model_type} {self.model_size} model")
+
+    def _setup_transformers_model(self, base_model_path: Optional[str], checkpoint_path: Optional[str]) -> None:
+        """Setup basic Transformers model."""
+        if not TRANSFORMERS_AVAILABLE:
+            raise RuntimeError("Transformers not available")
+
+        # Default model names for different types
+        model_map = {
+            "llama2": {
+                "7b": "meta-llama/Llama-2-7b-hf",
+                "13b": "meta-llama/Llama-2-13b-hf",
+            },
+            "llama3": {
+                "8b": "meta-llama/Meta-Llama-3-8B",
+            },
+            "codellama": {
+                "7b": "codellama/CodeLlama-7b-hf",
+                "13b": "codellama/CodeLlama-13b-hf",
+            }
+        }
+
+        # Determine model name
+        if base_model_path:
+            model_name = base_model_path
+        else:
+            model_name = model_map.get(self.model_type, {}).get(self.model_size)
+            if not model_name:
+                # Fallback to a small model for testing
+                model_name = "microsoft/DialoGPT-small"
+                logger.warning(f"No default model for {self.model_type} {self.model_size}, using {model_name}")
+
+        logger.info(f"Loading Transformers model: {model_name}")
+
+        # Load model and tokenizer
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                device_map="auto" if torch.cuda.is_available() else None
+            )
+
+            logger.info(f"Setup Transformers {self.model_type} {self.model_size} model")
+
+        except Exception as e:
+            logger.error(f"Failed to load model {model_name}: {e}")
+            # Fallback to an even smaller model
+            fallback_model = "microsoft/DialoGPT-small"
+            logger.info(f"Trying fallback model: {fallback_model}")
+
+            self.tokenizer = AutoTokenizer.from_pretrained(fallback_model)
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+
+            self.model = AutoModelForCausalLM.from_pretrained(fallback_model)
+            logger.info(f"Using fallback model: {fallback_model}")
     
     def setup_data(self, 
                   train_file: Union[str, Path],
