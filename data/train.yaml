@@ -1,0 +1,647 @@
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Task: Create and build an S32K14_DUC13 project in Eclipse IDE using SWTBot automation."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testCreateS32K14_DUC13Project() {
+          // Open New Project wizard
+          bot.menu("File").menu("New").menu("Project...").click();
+          bot.waitUntil(Conditions.shellIsActive("New Project"));
+          
+          // Navigate to S32K14_DUC13 project type
+          bot.tree().expandNode("NXP S32K1xx").select("S32K14_DUC13 Project");
+          bot.button("Next >").click();
+          
+          // Set project name
+          bot.textWithLabel("Project name:").setText("S32KDUC1431_Project");
+          bot.button("Next >").click();
+          
+          // Select processor
+          bot.comboBoxWithLabel("Processor:").setSelection("S32K14_DUC13");
+          bot.button("Next >").click();
+          
+          // Configure project settings
+          bot.checkBox("Generate sample application code").select();
+          bot.button("Finish").click();
+          
+          // Wait for project creation
+          bot.waitUntil(Conditions.treeHasRows(bot.tree(), 1), 10000);
+          
+          // Build the project
+          bot.tree().select("S32KDUC1431_Project");
+          bot.menu("Project").menu("Build Project").click();
+          
+          // Wait for build completion
+          bot.waitUntil(Conditions.shellIsActive("Build Progress"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Build Progress")), 30000);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure the S32K14_DUC13 project build settings for automotive applications?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureS32K14_DUC13BuildSettings() {
+          // Right-click on project and open properties
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
+          
+          // Navigate to C/C++ Build settings
+          bot.tree().expandNode("C/C++ Build").select("Settings");
+          
+          // Configure Cross ARM C Compiler
+          bot.tree().expandNode("Cross ARM C Compiler").select("Includes");
+          bot.button("Add...").click();
+          bot.text().setText("${workspace_loc:/${ProjName}/SDK/platform/drivers/inc}");
+          bot.button("OK").click();
+          
+          // Add automotive-specific include paths
+          bot.button("Add...").click();
+          bot.text().setText("${workspace_loc:/${ProjName}/SDK/platform/hal/inc}");
+          bot.button("OK").click();
+          
+          // Configure preprocessor symbols
+          bot.tree().select("Preprocessor");
+          bot.button("Add...").click();
+          bot.text().setText("S32K14_DUC13");
+          bot.button("OK").click();
+          
+          bot.button("Add...").click();
+          bot.text().setText("CPU_S32K14_DUC13HFT0VLLT");
+          bot.button("OK").click();
+          
+          // Configure optimization for automotive
+          bot.tree().expandNode("Cross ARM C Compiler").select("Optimization");
+          bot.comboBoxWithLabel("Optimization Level:").setSelection("Optimize for size (-Os)");
+          
+          // Configure linker settings
+          bot.tree().expandNode("Cross ARM C Linker").select("Libraries");
+          bot.button("Add...").click();
+          bot.text().setText("m");
+          bot.button("OK").click();
+          
+          // Set linker script
+          bot.tree().select("Miscellaneous");
+          bot.textWithLabel("Linker script (-T):").setText("${workspace_loc:/${ProjName}/Project_Settings/Linker_Files/S32K14_DUC13_64_flash.ld}");
+          
+          bot.button("Apply and Close").click();
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to add and configure GPIO driver for S32K14_DUC13 project."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testAddGPIODriverToS32K14_DUC13Project() {
+          // Open project in Project Explorer
+          bot.tree().select("S32KDUC1431_Project").doubleClick();
+          
+          // Navigate to SDK folder
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("SDK").expandNode("platform").expandNode("drivers");
+          
+          // Right-click on drivers folder
+          bot.tree().select("drivers").contextMenu("New").menu("Folder").click();
+          bot.shell("New Folder").activate();
+          bot.textWithLabel("Folder name:").setText("gpio");
+          bot.button("Finish").click();
+          
+          // Add GPIO source files
+          bot.tree().select("gpio").contextMenu("New").menu("File").click();
+          bot.shell("New File").activate();
+          bot.textWithLabel("File name:").setText("gpio_driver.c");
+          bot.button("Finish").click();
+          
+          // Add GPIO header file
+          bot.tree().select("gpio").contextMenu("New").menu("File").click();
+          bot.shell("New File").activate();
+          bot.textWithLabel("File name:").setText("gpio_driver.h");
+          bot.button("Finish").click();
+          
+          // Open main.c to add GPIO initialization
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+          
+          // Add include for GPIO driver
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          editor.toTextEditor().insertText(0, 0, "#include \"gpio_driver.h\"\n");
+          
+          // Save the file
+          editor.save();
+          
+          // Verify files were created
+          assertTrue("GPIO driver source should exist", 
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("SDK").expandNode("platform")
+                 .expandNode("drivers").expandNode("gpio").getNode("gpio_driver.c") != null);
+          
+          assertTrue("GPIO driver header should exist", 
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("SDK").expandNode("platform")
+                 .expandNode("drivers").expandNode("gpio").getNode("gpio_driver.h") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I configure the debugger for S32K14_DUC13 project using PEMicro interface?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureS32K14_DUC13Debugger() {
+          // Right-click on project and open Debug Configurations
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Debug As").menu("Debug Configurations...").click();
+          bot.waitUntil(Conditions.shellIsActive("Debug Configurations"));
+          
+          // Create new GDB PEMicro Interface Debugging configuration
+          bot.tree().select("GDB PEMicro Interface Debugging").contextMenu("New Configuration").click();
+          
+          // Set configuration name
+          bot.textWithLabel("Name:").setText("S32KDUC1431_Project Debug");
+          
+          // Configure Main tab
+          bot.tabItem("Main").activate();
+          bot.textWithLabel("Project:").setText("S32KDUC1431_Project");
+          bot.textWithLabel("C/C++ Application:").setText("Debug/S32KDUC1431_Project.elf");
+          
+          // Configure Debugger tab
+          bot.tabItem("Debugger").activate();
+          bot.comboBoxWithLabel("Interface:").setSelection("OpenSDA - USB1");
+          bot.comboBoxWithLabel("Port:").setSelection("USB1");
+          bot.comboBoxWithLabel("Device:").setSelection("S32K14_DUC13");
+          
+          // Set GDB command
+          bot.textWithLabel("GDB Command:").setText("${cross_prefix}gdb${cross_suffix}");
+          
+          // Configure connection settings
+          bot.checkBox("Use remote target").select();
+          bot.textWithLabel("Host name or IP address:").setText("localhost");
+          bot.textWithLabel("Port number:").setText("7224");
+          
+          // Configure Startup tab
+          bot.tabItem("Startup").activate();
+          bot.checkBox("Reset and Delay (seconds):").select();
+          bot.textWithLabel("Reset and Delay (seconds):").setText("1");
+          
+          bot.checkBox("Halt").select();
+          bot.checkBox("Load image").select();
+          bot.checkBox("Load symbols").select();
+          
+          // Set initial breakpoint
+          bot.checkBox("Set breakpoint at:").select();
+          bot.textWithLabel("Set breakpoint at:").setText("main");
+          
+          // Apply configuration
+          bot.button("Apply").click();
+          
+          // Test debug session
+          bot.button("Debug").click();
+          
+          // Wait for debug perspective
+          bot.waitUntil(Conditions.shellIsActive("Confirm Perspective Switch"), 5000);
+          bot.button("Switch").click();
+          
+          // Verify debug session started
+          bot.waitUntil(new ICondition() {
+              @Override
+              public boolean test() throws Exception {
+                  return bot.viewByTitle("Debug").isActive();
+              }
+              
+              @Override
+              public void init(SWTBot bot) {}
+              
+              @Override
+              public String getFailureMessage() {
+                  return "Debug view did not become active";
+              }
+          }, 10000);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure FlexCAN module for S32K14_DUC13 automotive communication."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureFlexCANForS32K14_DUC13() {
+          // Open S32 Configuration Tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+
+          // Navigate to Peripherals tab
+          bot.tabItem("Peripherals").activate();
+
+          // Enable FlexCAN0
+          bot.tree().expandNode("Communication").select("FlexCAN0");
+          bot.checkBox("Enable FlexCAN0").select();
+
+          // Configure FlexCAN settings
+          bot.comboBoxWithLabel("Clock Source:").setSelection("SOSCDIV2_CLK");
+          bot.textWithLabel("Bit Rate (kbps):").setText("500");
+          bot.textWithLabel("Number of Message Buffers:").setText("16");
+
+          // Configure message buffers
+          bot.tabItem("Message Buffers").activate();
+          bot.button("Add Message Buffer").click();
+
+          // Configure TX buffer
+          bot.comboBoxWithLabel("Direction:").setSelection("TX");
+          bot.textWithLabel("Message ID:").setText("0x123");
+          bot.comboBoxWithLabel("ID Type:").setSelection("Standard");
+          bot.textWithLabel("Data Length:").setText("8");
+
+          // Add RX buffer
+          bot.button("Add Message Buffer").click();
+          bot.comboBoxWithLabel("Direction:").setSelection("RX");
+          bot.textWithLabel("Message ID:").setText("0x456");
+          bot.comboBoxWithLabel("ID Type:").setSelection("Standard");
+
+          // Configure pins
+          bot.tabItem("Pins").activate();
+          bot.tree().expandNode("FlexCAN0").select("CAN0_TX");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTE4");
+
+          bot.tree().select("CAN0_RX");
+          bot.comboBoxWithLabel("Pin:").setSelection("PTE5");
+
+          // Generate code
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+
+          // Verify generated files
+          assertTrue("FlexCAN configuration should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("flexcan_driver.c") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I add and configure ADC functionality for S32K14_DUC13 sensor reading?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureADCForS32K14_DUC13() {
+          // Open project properties for ADC configuration
+          bot.tree().select("S32KDUC1431_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32KDUC1431_Project"));
+
+          // Navigate to S32K SDK configuration
+          bot.tree().expandNode("S32K SDK").select("Peripheral Drivers");
+
+          // Enable ADC driver
+          bot.checkBox("ADC").select();
+          bot.checkBox("ADC_SAR").select();
+
+          // Configure ADC settings
+          bot.tabItem("ADC Configuration").activate();
+          bot.comboBoxWithLabel("Clock Source:").setSelection("BUS_CLK");
+          bot.comboBoxWithLabel("Resolution:").setSelection("12-bit");
+          bot.comboBoxWithLabel("Sample Time:").setSelection("56 cycles");
+
+          // Configure ADC channels
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("ADC0_SE0");
+          bot.textWithLabel("Pin:").setText("PTA0");
+          bot.checkBox("Enable Interrupt").select();
+
+          // Add second channel for temperature sensor
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("ADC0_SE1");
+          bot.textWithLabel("Pin:").setText("PTA1");
+
+          // Configure conversion trigger
+          bot.comboBoxWithLabel("Trigger Source:").setSelection("Software");
+          bot.checkBox("Continuous Conversion").select();
+
+          // Apply settings
+          bot.button("Apply and Close").click();
+
+          // Add ADC initialization code to main.c
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String adcCode = "\n    /* Initialize ADC */\n" +
+                          "    ADC_DRV_ConfigConverter(INST_ADCONV1, &adConv1_ConvConfig0);\n" +
+                          "    ADC_DRV_ConfigChan(INST_ADCONV1, 0U, &adConv1_ChnConfig0);\n" +
+                          "    \n" +
+                          "    /* Start ADC conversion */\n" +
+                          "    ADC_DRV_StartConversion(INST_ADCONV1, 0U);\n";
+
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), adcCode);
+          editor.save();
+
+          // Build project to verify ADC integration
+          bot.tree().select("S32KDUC1431_Project");
+          bot.menu("Project").menu("Build Project").click();
+
+          // Wait for build completion
+          bot.waitUntil(Conditions.shellIsActive("Build Progress"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Build Progress")), 30000);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure PWM output for motor control in S32K14_DUC13 project."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigurePWMForMotorControl() {
+          // Open S32 Design Studio Configuration perspective
+          bot.menu("Window").menu("Perspective").menu("Open Perspective").menu("Other...").click();
+          bot.shell("Open Perspective").activate();
+          bot.list().select("S32 Configuration Tool");
+          bot.button("Open").click();
+
+          // Open configuration for current project
+          bot.tree().select("S32KDUC1431_Project").doubleClick();
+
+          // Navigate to Clocks configuration
+          bot.tabItem("Clocks").activate();
+
+          // Configure FIRC for PWM timing
+          bot.tree().expandNode("Clock Sources").select("FIRC");
+          bot.checkBox("Enable FIRC").select();
+          bot.textWithLabel("Frequency (MHz):").setText("48");
+
+          // Configure FlexTimer for PWM
+          bot.tabItem("Peripherals").activate();
+          bot.tree().expandNode("Timers").select("FTM0");
+          bot.checkBox("Enable FTM0").select();
+
+          // Set PWM configuration
+          bot.comboBoxWithLabel("Mode:").setSelection("Edge Aligned PWM");
+          bot.textWithLabel("Frequency (Hz):").setText("1000");
+          bot.textWithLabel("Duty Cycle (%):").setText("50");
+
+          // Configure PWM channels
+          bot.tabItem("Channels").activate();
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("Channel 0");
+          bot.comboBoxWithLabel("Output Mode:").setSelection("PWM High True");
+          bot.textWithLabel("Pin:").setText("PTD15");
+
+          // Add second channel for complementary PWM
+          bot.button("Add Channel").click();
+          bot.comboBoxWithLabel("Channel:").setSelection("Channel 1");
+          bot.comboBoxWithLabel("Output Mode:").setSelection("PWM High True");
+          bot.textWithLabel("Pin:").setText("PTD16");
+
+          // Configure deadtime for motor control
+          bot.tabItem("Advanced").activate();
+          bot.checkBox("Enable Deadtime").select();
+          bot.textWithLabel("Deadtime Value:").setText("100");
+
+          // Configure fault protection
+          bot.checkBox("Enable Fault Protection").select();
+          bot.comboBoxWithLabel("Fault Input:").setSelection("FTM_FAULT0");
+          bot.textWithLabel("Fault Pin:").setText("PTA5");
+
+          // Generate PWM code
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation Progress"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation Progress")), 20000);
+
+          // Verify PWM files generated
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code");
+          assertTrue("FTM PWM driver should be generated",
+              bot.tree().getTreeItem("S32KDUC1431_Project").getNode("Generated_Code")
+                 .getNode("ftm_pwm_driver.c") != null);
+
+          // Add PWM control code to main application
+          bot.tree().expandNode("Sources").select("main.c").doubleClick();
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+
+          String pwmControlCode = "\n    /* Initialize PWM for motor control */\n" +
+                                 "    FTM_DRV_Init(INST_FLEXTIMER_PWM1, &flexTimer_pwm1_InitConfig, NULL);\n" +
+                                 "    FTM_DRV_InitPwm(INST_FLEXTIMER_PWM1, &flexTimer_pwm1_PwmConfig);\n" +
+                                 "    \n" +
+                                 "    /* Start PWM generation */\n" +
+                                 "    FTM_DRV_UpdatePwmChannel(INST_FLEXTIMER_PWM1, 0U, FTM_PWM_UPDATE_IN_DUTY_CYCLE, 5000U, 0U, true);\n";
+
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), pwmControlCode);
+          editor.save();
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "How do I import an existing S32K14_DUC13 project and configure it for automotive development?"
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testImportExistingS32K14_DUC13Project() {
+          // Open Import wizard
+          bot.menu("File").menu("Import...").click();
+          bot.waitUntil(Conditions.shellIsActive("Import"));
+
+          // Select import type
+          bot.tree().expandNode("General").select("Existing Projects into Workspace");
+          bot.button("Next >").click();
+
+          // Browse for project location
+          bot.radio("Select root directory:").click();
+          bot.button("Browse...").click();
+
+          // Navigate to project directory (assuming it's in a known location)
+          bot.shell("Browse For Folder").activate();
+          bot.tree().select("S32K14_DUC13_Automotive_Project");
+          bot.button("OK").click();
+
+          // Select project to import
+          bot.checkBox("S32K14_DUC13_Automotive_Project").select();
+          bot.checkBox("Copy projects into workspace").select();
+          bot.button("Finish").click();
+
+          // Wait for import completion
+          bot.waitUntil(Conditions.treeHasRows(bot.tree(), 1), 10000);
+
+          // Configure project for automotive development
+          bot.tree().select("S32K14_DUC13_Automotive_Project").contextMenu("Properties").click();
+          bot.waitUntil(Conditions.shellIsActive("Properties for S32K14_DUC13_Automotive_Project"));
+
+          // Set automotive-specific compiler flags
+          bot.tree().expandNode("C/C++ Build").select("Settings");
+          bot.tree().expandNode("Cross ARM C Compiler").select("Preprocessor");
+
+          // Add automotive safety defines
+          bot.button("Add...").click();
+          bot.text().setText("AUTOMOTIVE_SAFETY");
+          bot.button("OK").click();
+
+          bot.button("Add...").click();
+          bot.text().setText("ISO26262_COMPLIANT");
+          bot.button("OK").click();
+
+          // Configure optimization for automotive
+          bot.tree().select("Optimization");
+          bot.comboBoxWithLabel("Optimization Level:").setSelection("Optimize for size (-Os)");
+          bot.checkBox("Function sections (-ffunction-sections)").select();
+          bot.checkBox("Data sections (-fdata-sections)").select();
+
+          // Configure linker for automotive memory layout
+          bot.tree().expandNode("Cross ARM C Linker").select("General");
+          bot.checkBox("Remove unused sections (--gc-sections)").select();
+
+          // Apply automotive configuration
+          bot.button("Apply and Close").click();
+
+          // Build imported project
+          bot.tree().select("S32K14_DUC13_Automotive_Project");
+          bot.menu("Project").menu("Build Project").click();
+
+          // Wait for build completion
+          bot.waitUntil(Conditions.shellIsActive("Build Progress"), 5000);
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Build Progress")), 45000);
+
+          // Verify project structure
+          assertTrue("Project should have SDK folder",
+              bot.tree().expandNode("S32K14_DUC13_Automotive_Project").getNode("SDK") != null);
+
+          assertTrue("Project should have Sources folder",
+              bot.tree().expandNode("S32K14_DUC13_Automotive_Project").getNode("Sources") != null);
+      }
+      ```
+---
+messages:
+  - role: system
+    content: "You are an expert test automation assistant specializing in S32K14_DUC13 microcontroller projects using SWTBot automation in Eclipse IDE."
+  - role: user
+    content: "Create a test to configure memory protection unit (MPU) for S32K14_DUC13 safety applications."
+  - role: assistant
+    content: |
+      ```java
+      @Test
+      public void testConfigureMPUForSafety() {
+          // Open S32 Configuration Tool
+          bot.tree().select("S32KDUC1431_Project").contextMenu("S32 Configuration Tool").click();
+          bot.waitUntil(Conditions.shellIsActive("S32 Configuration Tool"));
+
+          // Navigate to Safety features
+          bot.tabItem("Safety").activate();
+          bot.tree().select("MPU");
+
+          // Enable MPU
+          bot.checkBox("Enable MPU").select();
+
+          // Configure memory regions
+          bot.tabItem("Memory Regions").activate();
+
+          // Add Flash memory region
+          bot.button("Add Region").click();
+          bot.textWithLabel("Region Name:").setText("Flash_Region");
+          bot.textWithLabel("Start Address:").setText("0x00000000");
+          bot.textWithLabel("End Address:").setText("0x0007FFFF");
+          bot.comboBoxWithLabel("Access Rights:").setSelection("Read/Execute");
+          bot.checkBox("Supervisor Mode").select();
+          bot.checkBox("User Mode").select();
+
+          // Add RAM region
+          bot.button("Add Region").click();
+          bot.textWithLabel("Region Name:").setText("RAM_Region");
+          bot.textWithLabel("Start Address:").setText("0x1FFF8000");
+          bot.textWithLabel("End Address:").setText("0x20007FFF");
+          bot.comboBoxWithLabel("Access Rights:").setSelection("Read/Write");
+          bot.checkBox("Supervisor Mode").select();
+          bot.checkBox("User Mode").select();
+
+          // Add peripheral region
+          bot.button("Add Region").click();
+          bot.textWithLabel("Region Name:").setText("Peripheral_Region");
+          bot.textWithLabel("Start Address:").setText("0x40000000");
+          bot.textWithLabel("End Address:").setText("0x4007FFFF");
+          bot.comboBoxWithLabel("Access Rights:").setSelection("Read/Write");
+          bot.checkBox("Supervisor Mode").select();
+          bot.checkBox("User Mode").unselect();
+
+          // Configure stack guard region
+          bot.button("Add Region").click();
+          bot.textWithLabel("Region Name:").setText("Stack_Guard");
+          bot.textWithLabel("Start Address:").setText("0x20006000");
+          bot.textWithLabel("End Address:").setText("0x20006FFF");
+          bot.comboBoxWithLabel("Access Rights:").setSelection("No Access");
+
+          // Configure MPU fault handling
+          bot.tabItem("Fault Handling").activate();
+          bot.checkBox("Enable Bus Fault").select();
+          bot.checkBox("Enable Memory Management Fault").select();
+          bot.textWithLabel("Fault Handler Priority:").setText("0");
+
+          // Generate MPU configuration
+          bot.button("Generate Code").click();
+          bot.waitUntil(Conditions.shellIsActive("Code Generation"));
+          bot.waitUntil(Conditions.shellCloses(bot.shell("Code Generation")), 15000);
+
+          // Add MPU initialization code
+          bot.tree().expandNode("S32KDUC1431_Project").expandNode("Sources").select("main.c").doubleClick();
+
+          SWTBotEditor editor = bot.editorByTitle("main.c");
+          String mpuCode = "\n/* MPU fault handler */\n" +
+                          "void MemManage_Handler(void)\n" +
+                          "{\n" +
+                          "    /* Handle memory management fault */\n" +
+                          "    uint32_t faultAddr = SCB->MMFAR;\n" +
+                          "    \n" +
+                          "    /* Log fault information */\n" +
+                          "    /* Reset system or take corrective action */\n" +
+                          "    NVIC_SystemReset();\n" +
+                          "}\n" +
+                          "\n" +
+                          "void BusFault_Handler(void)\n" +
+                          "{\n" +
+                          "    /* Handle bus fault */\n" +
+                          "    uint32_t faultAddr = SCB->BFAR;\n" +
+                          "    \n" +
+                          "    /* Log fault information */\n" +
+                          "    /* Reset system or take corrective action */\n" +
+                          "    NVIC_SystemReset();\n" +
+                          "}\n\n";
+
+          editor.toTextEditor().insertText(0, mpuCode);
+
+          // Add MPU initialization in main
+          String initCode = "\n    /* Initialize MPU */\n" +
+                           "    MPU_DRV_Init(INST_MPU1, &mpu1_InitConfig0);\n" +
+                           "    \n" +
+                           "    /* Enable MPU */\n" +
+                           "    MPU_DRV_Enable(INST_MPU1);\n";
+
+          editor.toTextEditor().insertText(editor.toTextEditor().getText().indexOf("while(1)"), initCode);
+          editor.save();
+
+          // Verify MPU files
+          assertTrue("MPU driver should be generated",
+              bot.tree().expandNode("S32KDUC1431_Project").expandNode("Generated_Code")
+                 .getNode("mpu_driver.c") != null);
+      }
+      ```

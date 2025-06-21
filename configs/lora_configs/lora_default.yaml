@@ -1,0 +1,56 @@
+# LoRA Configuration for CodeLlama Fine-tuning
+
+lora:
+  # LoRA rank - higher rank = more parameters but better adaptation
+  r: 16
+  
+  # LoRA alpha - scaling factor for LoRA weights
+  lora_alpha: 32
+  
+  # Dropout probability for LoRA layers
+  lora_dropout: 0.1
+  
+  # Target modules for LoRA adaptation
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  
+  # Bias handling
+  bias: "none"  # Options: "none", "all", "lora_only"
+  
+  # Task type
+  task_type: "CAUSAL_LM"
+  
+  # Whether to use rslora (rank-stabilized LoRA)
+  use_rslora: false
+  
+  # Whether to use DoRA (Weight-Decomposed Low-Rank Adaptation)
+  use_dora: false
+
+# Alternative configurations for different use cases
+alternative_configs:
+  # High-rank configuration for better adaptation
+  high_rank:
+    r: 64
+    lora_alpha: 128
+    lora_dropout: 0.05
+  
+  # Low-rank configuration for memory efficiency
+  low_rank:
+    r: 8
+    lora_alpha: 16
+    lora_dropout: 0.1
+  
+  # Minimal configuration for testing
+  minimal:
+    r: 4
+    lora_alpha: 8
+    lora_dropout: 0.1
+    target_modules:
+      - "q_proj"
+      - "v_proj"

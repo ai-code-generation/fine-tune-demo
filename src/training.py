@@ -1,0 +1,238 @@
+"""
+Training implementation for CodeLlama fine-tuning with LoRA.
+Handles the complete training pipeline including data loading, training, and evaluation.
+"""
+
+import os
+import torch
+import logging
+from typing import Dict, Any, Optional
+from transformers import Trainer, DataCollatorForLanguageModeling
+from datasets import Dataset
+from pathlib import Path
+import json
+import time
+
+from .model_setup import ModelSetup
+from .data_handler import ConversationDataHandler
+
+logger = logging.getLogger(__name__)
+
+
+class CodeLlamaTrainer:
+    """Main trainer class for CodeLlama fine-tuning."""
+    
+    def __init__(self, 
+                 model_config_path: str,
+                 lora_config_path: str,
+                 output_dir: str = "./output"):
+        """
+        Initialize the trainer.
+        
+        Args:
+            model_config_path: Path to model configuration
+            lora_config_path: Path to LoRA configuration
+            output_dir: Directory to save outputs
+        """
+        self.model_setup = ModelSetup(model_config_path, lora_config_path)
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize components
+        self.tokenizer = None
+        self.model = None
+        self.trainer = None
+        
+    def setup_model_and_tokenizer(self):
+        """Setup model and tokenizer."""
+        logger.info("Setting up tokenizer...")
+        self.tokenizer = self.model_setup.setup_tokenizer()
+        
+        logger.info("Setting up model...")
+        self.model = self.model_setup.setup_model(self.tokenizer)
+        
+        logger.info("Applying LoRA...")
+        self.model = self.model_setup.apply_lora(self.model)
+        
+    def prepare_datasets(self, 
+                        train_data_path: str, 
+                        eval_data_path: Optional[str] = None) -> Dict[str, Dataset]:
+        """
+        Prepare training and evaluation datasets.
+        
+        Args:
+            train_data_path: Path to training YAML file
+            eval_data_path: Path to evaluation YAML file (optional)
+            
+        Returns:
+            Dictionary containing train and eval datasets
+        """
+        if self.tokenizer is None:
+            raise ValueError("Tokenizer not initialized. Call setup_model_and_tokenizer() first.")
+        
+        # Get max length from model config
+        max_length = self.model_setup.model_config['training']['max_length']
+        
+        # Initialize data handler
+        data_handler = ConversationDataHandler(self.tokenizer, max_length)
+        
+        # Process training data
+        logger.info(f"Processing training data from {train_data_path}")
+        train_dataset = data_handler.process_yaml_file(train_data_path)
+        
+        datasets = {"train": train_dataset}
+        
+        # Process evaluation data if provided
+        if eval_data_path and os.path.exists(eval_data_path):
+            logger.info(f"Processing evaluation data from {eval_data_path}")
+            eval_dataset = data_handler.process_yaml_file(eval_data_path)
+            datasets["eval"] = eval_dataset
+        else:
+            logger.info("No evaluation data provided or file not found")
+            
+        return datasets
+    
+    def setup_trainer(self, datasets: Dict[str, Dataset]):
+        """
+        Setup the Hugging Face trainer.
+        
+        Args:
+            datasets: Dictionary containing train and eval datasets
+        """
+        if self.model is None or self.tokenizer is None:
+            raise ValueError("Model and tokenizer not initialized.")
+        
+        # Setup training arguments
+        training_args = self.model_setup.setup_training_arguments(str(self.output_dir))
+        
+        # Setup data collator
+        data_collator = DataCollatorForLanguageModeling(
+            tokenizer=self.tokenizer,
+            mlm=False,  # We're doing causal language modeling, not masked LM
+            pad_to_multiple_of=8  # For efficiency with tensor cores
+        )
+        
+        # Initialize trainer
+        self.trainer = Trainer(
+            model=self.model,
+            args=training_args,
+            train_dataset=datasets["train"],
+            eval_dataset=datasets.get("eval"),
+            data_collator=data_collator,
+            tokenizer=self.tokenizer,
+        )
+        
+        logger.info("Trainer setup complete")
+    
+    def train(self, 
+              train_data_path: str, 
+              eval_data_path: Optional[str] = None,
+              resume_from_checkpoint: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Run the complete training pipeline.
+        
+        Args:
+            train_data_path: Path to training YAML file
+            eval_data_path: Path to evaluation YAML file (optional)
+            resume_from_checkpoint: Path to checkpoint to resume from (optional)
+            
+        Returns:
+            Training metrics and information
+        """
+        start_time = time.time()
+        
+        try:
+            # Setup model and tokenizer
+            self.setup_model_and_tokenizer()
+            
+            # Prepare datasets
+            datasets = self.prepare_datasets(train_data_path, eval_data_path)
+            
+            # Setup trainer
+            self.setup_trainer(datasets)
+            
+            # Save model info
+            self._save_model_info()
+            
+            # Start training
+            logger.info("Starting training...")
+            train_result = self.trainer.train(resume_from_checkpoint=resume_from_checkpoint)
+            
+            # Save the final model
+            logger.info("Saving final model...")
+            self.trainer.save_model()
+            self.trainer.save_state()
+            
+            # Calculate training time
+            training_time = time.time() - start_time
+            
+            # Prepare results
+            results = {
+                "train_runtime": train_result.metrics.get("train_runtime", 0),
+                "train_samples_per_second": train_result.metrics.get("train_samples_per_second", 0),
+                "train_steps_per_second": train_result.metrics.get("train_steps_per_second", 0),
+                "total_flos": train_result.metrics.get("total_flos", 0),
+                "train_loss": train_result.metrics.get("train_loss", 0),
+                "total_training_time": training_time,
+                "output_dir": str(self.output_dir)
+            }
+            
+            # Save training results
+            self._save_training_results(results)
+            
+            logger.info(f"Training completed successfully in {training_time:.2f} seconds")
+            logger.info(f"Final train loss: {results['train_loss']:.4f}")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Training failed: {e}")
+            raise
+
+    def _save_model_info(self):
+        """Save model configuration information."""
+        model_info = self.model_setup.get_model_info()
+        model_info["output_dir"] = str(self.output_dir)
+        model_info["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+        info_path = self.output_dir / "model_info.json"
+        with open(info_path, 'w', encoding='utf-8') as f:
+            json.dump(model_info, f, indent=2)
+
+        logger.info(f"Model info saved to {info_path}")
+
+    def _save_training_results(self, results: Dict[str, Any]):
+        """Save training results to file."""
+        results_path = self.output_dir / "training_results.json"
+        with open(results_path, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2)
+
+        logger.info(f"Training results saved to {results_path}")
+
+    def evaluate(self, eval_data_path: str) -> Dict[str, Any]:
+        """
+        Evaluate the trained model.
+
+        Args:
+            eval_data_path: Path to evaluation YAML file
+
+        Returns:
+            Evaluation metrics
+        """
+        if self.trainer is None:
+            raise ValueError("Trainer not initialized. Run training first.")
+
+        # Prepare evaluation dataset
+        datasets = self.prepare_datasets("", eval_data_path)  # Empty train path
+        eval_dataset = datasets.get("eval")
+
+        if eval_dataset is None:
+            raise ValueError("No evaluation dataset found")
+
+        # Run evaluation
+        logger.info("Running evaluation...")
+        eval_results = self.trainer.evaluate(eval_dataset=eval_dataset)
+
+        logger.info(f"Evaluation completed. Eval loss: {eval_results.get('eval_loss', 'N/A')}")
+
+        return eval_results

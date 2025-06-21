@@ -1,0 +1,48 @@
+# CodeLlama 13B Model Configuration
+
+model:
+  name: "codellama/CodeLlama-13b-Instruct-hf"
+  model_type: "llama"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+  trust_remote_code: true
+  use_cache: false
+
+tokenizer:
+  name: "codellama/CodeLlama-13b-Instruct-hf"
+  padding_side: "right"
+  truncation_side: "right"
+  add_eos_token: true
+  add_bos_token: true
+
+training:
+  max_length: 2048
+  batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 1e-4
+  num_epochs: 3
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 500
+  eval_steps: 500
+  save_total_limit: 3
+  dataloader_num_workers: 4
+  remove_unused_columns: false
+  optim: "paged_adamw_32bit"
+  lr_scheduler_type: "cosine"
+  weight_decay: 0.001
+  max_grad_norm: 0.3
+  group_by_length: true
+  ddp_find_unused_parameters: false
+
+quantization:
+  load_in_4bit: true
+  bnb_4bit_compute_dtype: "bfloat16"
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_quant_type: "nf4"
+
+memory_optimization:
+  gradient_checkpointing: true
+  dataloader_pin_memory: true
+  fp16: false
+  bf16: true

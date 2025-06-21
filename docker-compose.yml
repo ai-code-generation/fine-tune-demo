@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  codellama-finetune:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codellama-finetune
+
+    # GPU support - multiple methods for compatibility
+    runtime: nvidia  # For older Docker versions
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+
+    # Environment variables
+    environment:
+      - CUDA_VISIBLE_DEVICES=all  # Use all available GPUs
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - HF_HOME=/workspace/cache
+      - TRANSFORMERS_CACHE=/workspace/cache
+      - HF_DATASETS_CACHE=/workspace/cache
+      - TORCH_HOME=/workspace/cache
+      - WANDB_DISABLED=true  # Disable wandb by default
+      - CUDA_LAUNCH_BLOCKING=1  # For debugging CUDA issues
+      - PYTHONPATH=/workspace/src
+    
+    # Volume mounts
+    volumes:
+      # Mount output directory to persist trained models
+      - ./output:/workspace/output
+
+      # Mount data directory for training data
+      - ./data:/workspace/data
+
+      # Mount configs for easy modification
+      - ./configs:/workspace/configs
+
+      # Mount cache directory to persist downloaded models
+      - model_cache:/workspace/cache
+
+      # Mount logs directory
+      - training_logs:/workspace/logs
+
+      # Mount scripts for easy modification during development
+      - ./scripts:/workspace/scripts
+
+    # Resource limits and reservations
+    deploy:
+      resources:
+        limits:
+          memory: 32G  # Adjust based on your system
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+
+    # Shared memory size for PyTorch DataLoader
+    shm_size: '2gb'
+
+    # Working directory
+    working_dir: /workspace
+
+    # Keep container running
+    tty: true
+    stdin_open: true
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import torch; assert torch.cuda.is_available()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: TensorBoard service for monitoring training
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: codellama-tensorboard
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./output:/logs
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    profiles:
+      - tensorboard
+
+  # Optional: Jupyter notebook for experimentation
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: codellama-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./:/workspace
+      - ./output:/workspace/output
+      - ./cache:/workspace/cache
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: >
+      bash -c "
+        pip install jupyter jupyterlab &&
+        jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      "
+    profiles:
+      - jupyter
+
+# Named volumes for persistence
+volumes:
+  model_cache:
+    driver: local
+  training_logs:
+    driver: local
+
+# Networks
+networks:
+  default:
+    name: codellama-network
