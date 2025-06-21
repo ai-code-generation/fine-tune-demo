@@ -27,6 +27,9 @@ services:
       - WANDB_CACHE_DIR=/workspace/.cache/wandb
       - WANDB_PROJECT=nemo-s32k144-finetune
       - TOKENIZERS_PARALLELISM=false
+      # HuggingFace authentication token for accessing gated models
+      # Set your token: HF_TOKEN=hf_your_token_here
+      - HF_TOKEN=${HF_TOKEN:-}
     
     # Volume mounts for persistent data
     volumes:
@@ -112,6 +115,7 @@ services:
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - PYTHONPATH=/workspace/src
+      - HF_TOKEN=${HF_TOKEN:-}
     depends_on:
       - nemo-finetune
     restart: unless-stopped
