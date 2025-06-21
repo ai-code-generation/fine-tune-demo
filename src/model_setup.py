@@ -268,11 +268,35 @@ class ModelSetup:
         return training_args
     
     def get_model_info(self) -> Dict[str, Any]:
-        """Get model configuration information."""
-        return {
+        """Get comprehensive model configuration information."""
+        info = {
+            # Model configuration
             'model_name': self.model_config['model']['name'],
+            'model_type': self.model_config['model']['model_type'],
+            'torch_dtype': self.model_config['model']['torch_dtype'],
+            'device_map': self.model_config['model']['device_map'],
+
+            # Training configuration
             'max_length': self.model_config['training']['max_length'],
+            'batch_size': self.model_config['training']['batch_size'],
+            'learning_rate': self.model_config['training']['learning_rate'],
+            'num_epochs': self.model_config['training']['num_epochs'],
+            'optimizer': self.model_config['training']['optim'],
+
+            # LoRA configuration
             'lora_r': self.lora_config['lora']['r'],
             'lora_alpha': self.lora_config['lora']['lora_alpha'],
-            'target_modules': self.lora_config['lora']['target_modules']
+            'lora_dropout': self.lora_config['lora']['lora_dropout'],
+            'target_modules': self.lora_config['lora']['target_modules'],
+            'lora_bias': self.lora_config['lora']['bias'],
+
+            # Quantization configuration
+            'quantization_enabled': self.model_config.get('quantization', {}).get('load_in_4bit', False),
+
+            # Memory optimization
+            'gradient_checkpointing': self.model_config.get('memory_optimization', {}).get('gradient_checkpointing', False),
+            'fp16': self.model_config.get('memory_optimization', {}).get('fp16', False),
+            'bf16': self.model_config.get('memory_optimization', {}).get('bf16', False)
         }
+
+        return info

@@ -24,20 +24,20 @@ services:
     
     # Volume mounts
     volumes:
-      # Mount output directory to persist trained models
-      - ./output:/workspace/output
-      
+      # Mount output directory to persist trained models (with write permissions)
+      - ./output:/workspace/output:rw
+
       # Mount data directory for training data
-      - ./data:/workspace/data
-      
-      # Mount configs for easy modification
-      - ./configs:/workspace/configs
-      
+      - ./data:/workspace/data:rw
+
+      # Mount configs for easy modification (read-only)
+      - ./configs:/workspace/configs:ro
+
       # Mount cache directory to persist downloaded models
-      - ./cache:/workspace/cache
+      - ./cache:/workspace/cache:rw
 
       # Mount logs directory
-      - ./logs:/workspace/logs
+      - ./logs:/workspace/logs:rw
       
       # Mount scripts for easy modification during development
       - ./scripts:/workspace/scripts

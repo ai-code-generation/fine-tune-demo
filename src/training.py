@@ -100,39 +100,49 @@ class CodeLlamaTrainer:
         logger.info("Applying LoRA...")
         self.model = self.model_setup.apply_lora(self.model)
         
-    def prepare_datasets(self, 
-                        train_data_path: str, 
+    def prepare_datasets(self,
+                        train_data_path: Optional[str],
                         eval_data_path: Optional[str] = None) -> Dict[str, Dataset]:
         """
         Prepare training and evaluation datasets.
-        
+
         Args:
-            train_data_path: Path to training YAML file
+            train_data_path: Path to training YAML file (optional for evaluation-only)
             eval_data_path: Path to evaluation YAML file (optional)
-            
+
         Returns:
             Dictionary containing train and eval datasets
         """
         if self.tokenizer is None:
             raise ValueError("Tokenizer not initialized. Call setup_model_and_tokenizer() first.")
-        
+
         # Get max length from model config
         max_length = self.model_setup.model_config['training']['max_length']
-        
+
         # Initialize data handler
         data_handler = ConversationDataHandler(self.tokenizer, max_length)
-        
-        # Process training data
-        logger.info(f"Processing training data from {train_data_path}")
-        train_dataset = data_handler.process_yaml_file(train_data_path)
-        
-        datasets = {"train": train_dataset}
+
+        datasets = {}
+
+        # Process training data if provided
+        if train_data_path and os.path.exists(train_data_path):
+            logger.info(f"Processing training data from {train_data_path}")
+            train_dataset = data_handler.process_yaml_file(train_data_path)
+            datasets["train"] = train_dataset
+
+            # Log training data info
+            logger.info(f"Training dataset size: {len(train_dataset)} samples")
+        else:
+            logger.info("No training data provided or file not found")
         
         # Process evaluation data if provided
         if eval_data_path and os.path.exists(eval_data_path):
             logger.info(f"Processing evaluation data from {eval_data_path}")
             eval_dataset = data_handler.process_yaml_file(eval_data_path)
             datasets["eval"] = eval_dataset
+
+            # Log evaluation data info
+            logger.info(f"Evaluation dataset size: {len(eval_dataset)} samples")
         else:
             logger.info("No evaluation data provided or file not found")
             
@@ -192,12 +202,18 @@ class CodeLlamaTrainer:
             
             # Prepare datasets
             datasets = self.prepare_datasets(train_data_path, eval_data_path)
-            
+
+            # Log dataset information
+            train_size = len(datasets.get("train", []))
+            eval_size = len(datasets.get("eval", [])) if datasets.get("eval") else 0
+            logger.info(f"Dataset summary: {train_size} training samples, {eval_size} evaluation samples")
+
             # Setup trainer
             self.setup_trainer(datasets)
-            
-            # Save model info
-            self._save_model_info()
+
+            # Save and log model info
+            model_info = self._save_model_info()
+            self._log_model_info(model_info)
             
             # Start training
             logger.info("Starting training...")
@@ -224,10 +240,10 @@ class CodeLlamaTrainer:
             
             # Save training results
             self._save_training_results(results)
-            
-            logger.info(f"Training completed successfully in {training_time:.2f} seconds")
-            logger.info(f"Final train loss: {results['train_loss']:.4f}")
-            
+
+            # Log training completion summary
+            self._log_training_summary(results, train_size, eval_size)
+
             return results
             
         except Exception as e:
@@ -245,6 +261,38 @@ class CodeLlamaTrainer:
             json.dump(model_info, f, indent=2)
 
         logger.info(f"Model info saved to {info_path}")
+        return model_info
+
+    def _log_model_info(self, model_info: Dict[str, Any]):
+        """Log model configuration information."""
+        logger.info("=" * 60)
+        logger.info("MODEL CONFIGURATION SUMMARY")
+        logger.info("=" * 60)
+        logger.info(f"Model: {model_info['model_name']}")
+        logger.info(f"Model Type: {model_info['model_type']}")
+        logger.info(f"Device: {model_info['device_map']}")
+        logger.info(f"Data Type: {model_info['torch_dtype']}")
+        logger.info("")
+        logger.info("Training Configuration:")
+        logger.info(f"  Max Length: {model_info['max_length']}")
+        logger.info(f"  Batch Size: {model_info['batch_size']}")
+        logger.info(f"  Learning Rate: {model_info['learning_rate']}")
+        logger.info(f"  Epochs: {model_info['num_epochs']}")
+        logger.info(f"  Optimizer: {model_info['optimizer']}")
+        logger.info("")
+        logger.info("LoRA Configuration:")
+        logger.info(f"  Rank (r): {model_info['lora_r']}")
+        logger.info(f"  Alpha: {model_info['lora_alpha']}")
+        logger.info(f"  Dropout: {model_info['lora_dropout']}")
+        logger.info(f"  Target Modules: {model_info['target_modules']}")
+        logger.info(f"  Bias: {model_info['lora_bias']}")
+        logger.info("")
+        logger.info("Memory Optimization:")
+        logger.info(f"  Quantization: {model_info['quantization_enabled']}")
+        logger.info(f"  Gradient Checkpointing: {model_info['gradient_checkpointing']}")
+        logger.info(f"  FP16: {model_info['fp16']}")
+        logger.info(f"  BF16: {model_info['bf16']}")
+        logger.info("=" * 60)
 
     def _save_training_results(self, results: Dict[str, Any]):
         """Save training results to file."""
@@ -253,6 +301,20 @@ class CodeLlamaTrainer:
             json.dump(results, f, indent=2)
 
         logger.info(f"Training results saved to {results_path}")
+
+    def _log_training_summary(self, results: Dict[str, Any], train_size: int, eval_size: int):
+        """Log training completion summary."""
+        logger.info("=" * 60)
+        logger.info("TRAINING COMPLETED SUCCESSFULLY!")
+        logger.info("=" * 60)
+        logger.info(f"Training Time: {results['total_training_time']:.2f} seconds ({results['total_training_time']/60:.1f} minutes)")
+        logger.info(f"Final Train Loss: {results['train_loss']:.4f}")
+        logger.info(f"Training Samples: {train_size}")
+        logger.info(f"Evaluation Samples: {eval_size}")
+        logger.info(f"Samples per Second: {results['train_samples_per_second']:.2f}")
+        logger.info(f"Steps per Second: {results['train_steps_per_second']:.2f}")
+        logger.info(f"Model saved to: {results['output_dir']}")
+        logger.info("=" * 60)
 
     def evaluate(self, eval_data_path: str) -> Dict[str, Any]:
         """
@@ -268,7 +330,7 @@ class CodeLlamaTrainer:
             raise ValueError("Trainer not initialized. Run training first.")
 
         # Prepare evaluation dataset
-        datasets = self.prepare_datasets("", eval_data_path)  # Empty train path
+        datasets = self.prepare_datasets(None, eval_data_path)  # No train path for evaluation
         eval_dataset = datasets.get("eval")
 
         if eval_dataset is None:
