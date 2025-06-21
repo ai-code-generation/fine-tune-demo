@@ -90,25 +90,37 @@ class ConversationDataHandler:
     def tokenize_conversation(self, conversation_text: str) -> Dict[str, Any]:
         """
         Tokenize a formatted conversation.
-        
+
         Args:
             conversation_text: Formatted conversation string
-            
+
         Returns:
             Dictionary with tokenized inputs
         """
-        # Tokenize the text
+        # Tokenize the text with proper settings for training
         tokenized = self.tokenizer(
             conversation_text,
             truncation=True,
-            padding=False,
+            padding=False,  # Let data collator handle padding
             max_length=self.max_length,
-            return_tensors=None
+            return_tensors=None,
+            add_special_tokens=True
         )
-        
+
         # For causal language modeling, labels are the same as input_ids
-        tokenized['labels'] = tokenized['input_ids'].copy()
-        
+        # Convert to list to ensure consistent data types
+        input_ids = tokenized['input_ids']
+        if isinstance(input_ids, list):
+            tokenized['labels'] = input_ids.copy()
+        else:
+            tokenized['labels'] = input_ids.tolist()
+            tokenized['input_ids'] = input_ids.tolist()
+
+        # Ensure attention_mask is also a list
+        if 'attention_mask' in tokenized:
+            if not isinstance(tokenized['attention_mask'], list):
+                tokenized['attention_mask'] = tokenized['attention_mask'].tolist()
+
         return tokenized
     
     def process_yaml_file(self, file_path: str) -> Dataset:
@@ -126,18 +138,29 @@ class ConversationDataHandler:
         
         # Format and tokenize conversations
         processed_data = []
-        for conv in conversations:
+        for i, conv in enumerate(conversations):
             try:
                 formatted_text = self.format_conversation_for_training(conv)
                 if formatted_text:  # Skip empty conversations
                     tokenized = self.tokenize_conversation(formatted_text)
                     tokenized['text'] = formatted_text  # Keep original text for reference
+
+                    # Log sequence length for debugging
+                    seq_length = len(tokenized['input_ids'])
+                    if seq_length > self.max_length:
+                        logger.warning(f"Conversation {i} length {seq_length} exceeds max_length {self.max_length}")
+
                     processed_data.append(tokenized)
             except Exception as e:
-                logger.warning(f"Error processing conversation: {e}")
+                logger.warning(f"Error processing conversation {i}: {e}")
                 continue
-        
-        logger.info(f"Successfully processed {len(processed_data)} conversations")
+
+        if processed_data:
+            lengths = [len(item['input_ids']) for item in processed_data]
+            logger.info(f"Successfully processed {len(processed_data)} conversations")
+            logger.info(f"Sequence lengths - Min: {min(lengths)}, Max: {max(lengths)}, Avg: {sum(lengths)/len(lengths):.1f}")
+        else:
+            logger.warning("No conversations were successfully processed")
         
         # Create Hugging Face Dataset
         dataset = Dataset.from_list(processed_data)

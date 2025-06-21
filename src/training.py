@@ -6,8 +6,8 @@ Handles the complete training pipeline including data loading, training, and eva
 import os
 import torch
 import logging
-from typing import Dict, Any, Optional
-from transformers import Trainer, DataCollatorForLanguageModeling
+from typing import Dict, Any, Optional, List
+from transformers import Trainer, DataCollatorForLanguageModeling, PreTrainedTokenizer
 from datasets import Dataset
 from pathlib import Path
 import json
@@ -17,6 +17,52 @@ from .model_setup import ModelSetup
 from .data_handler import ConversationDataHandler
 
 logger = logging.getLogger(__name__)
+
+
+class CustomDataCollator:
+    """Custom data collator that handles variable sequence lengths properly."""
+
+    def __init__(self, tokenizer, pad_to_multiple_of=8):
+        self.tokenizer = tokenizer
+        self.pad_to_multiple_of = pad_to_multiple_of
+
+    def __call__(self, features):
+        # Extract input_ids and labels
+        input_ids = [f["input_ids"] for f in features]
+        labels = [f["labels"] for f in features]
+
+        # Find max length in batch
+        max_length = max(len(ids) for ids in input_ids)
+
+        # Pad to multiple of pad_to_multiple_of if specified
+        if self.pad_to_multiple_of:
+            max_length = ((max_length + self.pad_to_multiple_of - 1) // self.pad_to_multiple_of) * self.pad_to_multiple_of
+
+        # Pad sequences
+        padded_input_ids = []
+        padded_labels = []
+        attention_masks = []
+
+        for ids, lbls in zip(input_ids, labels):
+            # Calculate padding needed
+            padding_length = max_length - len(ids)
+
+            # Pad input_ids and labels
+            padded_ids = ids + [self.tokenizer.pad_token_id] * padding_length
+            padded_lbls = lbls + [-100] * padding_length  # -100 is ignored in loss calculation
+
+            # Create attention mask
+            attention_mask = [1] * len(ids) + [0] * padding_length
+
+            padded_input_ids.append(padded_ids)
+            padded_labels.append(padded_lbls)
+            attention_masks.append(attention_mask)
+
+        return {
+            "input_ids": torch.tensor(padded_input_ids, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_masks, dtype=torch.long),
+            "labels": torch.tensor(padded_labels, dtype=torch.long)
+        }
 
 
 class CodeLlamaTrainer:
@@ -105,10 +151,9 @@ class CodeLlamaTrainer:
         # Setup training arguments
         training_args = self.model_setup.setup_training_arguments(str(self.output_dir))
         
-        # Setup data collator
-        data_collator = DataCollatorForLanguageModeling(
+        # Setup custom data collator to handle variable sequence lengths
+        data_collator = CustomDataCollator(
             tokenizer=self.tokenizer,
-            mlm=False,  # We're doing causal language modeling, not masked LM
             pad_to_multiple_of=8  # For efficiency with tensor cores
         )
         
