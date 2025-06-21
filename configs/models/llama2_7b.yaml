@@ -1,0 +1,118 @@
+# LLaMA2 7B Model Configuration
+
+model:
+  _target_: nemo.collections.nlp.models.language_modeling.megatron_gpt_model.MegatronGPTModel
+  
+  # Model architecture
+  encoder_seq_length: 4096
+  max_position_embeddings: 4096
+  num_layers: 32
+  hidden_size: 4096
+  ffn_hidden_size: 11008
+  num_attention_heads: 32
+  init_method_std: 0.02
+  use_scaled_init_method: true
+  hidden_dropout: 0.0
+  attention_dropout: 0.0
+  kv_channels: null
+  apply_query_key_layer_scaling: true
+  normalization: rmsnorm
+  layernorm_epsilon: 1.0e-5
+  do_layer_norm_weight_decay: false
+  make_vocab_size_divisible_by: 128
+  pre_process: true
+  post_process: true
+  persist_layer_norm: true
+  bias: false
+  activation: 'swiglu'
+  headscale: false
+  transformer_block_type: 'pre_ln'
+  openai_gelu: false
+  normalize_attention_scores: true
+  position_embedding_type: 'rope'
+  rotary_percentage: 1.0
+  apply_rope_fusion: true
+  
+  # Tokenizer
+  tokenizer:
+    library: 'huggingface'
+    type: 'meta-llama/Llama-2-7b-hf'
+    use_fast: true
+    
+  # Data
+  data:
+    data_impl: mmap
+    splits_string: "99,1,0"
+    seq_length: 4096
+    skip_warmup: true
+    num_workers: 2
+    dataloader_type: single
+    reset_position_ids: false
+    reset_attention_mask: false
+    eod_mask_loss: false
+    index_mapping_dir: null
+    
+  # Optimizer
+  optim:
+    name: fused_adam
+    lr: 2.0e-4
+    weight_decay: 0.01
+    betas:
+      - 0.9
+      - 0.95
+    sched:
+      name: CosineAnnealing
+      warmup_steps: 2000
+      constant_steps: 0
+      min_lr: 2.0e-5
+      
+  # Precision
+  precision: bf16
+  
+  # Gradient clipping
+  gradient_clip_val: 1.0
+  
+  # Logging
+  log_every_n_steps: 10
+  val_check_interval: 1000
+  limit_val_batches: 50
+  
+  # Checkpointing
+  save_top_k: 3
+  monitor: "val_loss"
+  mode: "min"
+  always_save_nemo: false
+  
+  # Model parallel
+  tensor_model_parallel_size: 1
+  pipeline_model_parallel_size: 1
+  virtual_pipeline_model_parallel_size: null
+  sequence_parallel: false
+  
+  # Activation checkpointing
+  activations_checkpoint_granularity: null
+  activations_checkpoint_method: null
+  activations_checkpoint_num_layers: null
+  
+  # Miscellaneous
+  share_embeddings_and_output_weights: false
+  overlap_p2p_comm: false
+  batch_p2p_comm: true
+  
+  # Resume from checkpoint
+  resume_from_checkpoint: null
+  
+  # Apply LoRA
+  peft:
+    peft_scheme: "lora"
+    restore_from_path: null
+    
+    lora_tuning:
+      target_modules: ['attention_qkv', 'attention_dense', 'mlp_fc1', 'mlp_fc2']
+      adapter_dim: 32
+      adapter_dropout: 0.1
+      column_init_method: 'xavier'
+      row_init_method: 'zero'
+      layer_selection: null
+      weight_tying: false
+      module_filter: null

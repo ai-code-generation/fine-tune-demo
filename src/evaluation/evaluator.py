@@ -10,11 +10,22 @@ import logging
 
 try:
     import torch
-    from transformers import AutoTokenizer
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
     logging.warning("PyTorch not available. Evaluation will be limited.")
+
+try:
+    from transformers import AutoTokenizer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    # Create a dummy class for type hints when transformers is not available
+    class AutoTokenizer:
+        @staticmethod
+        def from_pretrained(*args, **kwargs):
+            raise ImportError("transformers not available")
+    logging.warning("Transformers not available. Tokenizer functionality will be limited.")
 
 try:
     # Try relative imports first (when used as a package)
@@ -94,14 +105,18 @@ class ModelEvaluator:
     def load_tokenizer(self, tokenizer_path: Optional[str] = None) -> None:
         """
         Load the tokenizer.
-        
+
         Args:
             tokenizer_path: Optional path to tokenizer
         """
+        if not TRANSFORMERS_AVAILABLE:
+            logger.error("Cannot load tokenizer: transformers not available")
+            return
+
         tokenizer_path = tokenizer_path or self.tokenizer_path
         if not tokenizer_path:
             raise ValueError("No tokenizer path provided")
-        
+
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_path,

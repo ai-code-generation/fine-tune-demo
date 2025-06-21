@@ -6,10 +6,20 @@ from typing import Dict, Any, Optional, Union
 from pathlib import Path
 import logging
 
+# Import transformers first (always available)
+try:
+    from transformers import AutoTokenizer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    # Create a dummy class for type hints when transformers is not available
+    class AutoTokenizer:
+        pass
+
+# Import NeMo components
 try:
     from nemo.collections.nlp.models.language_modeling.megatron_gpt_model import MegatronGPTModel
     from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
-    from transformers import AutoTokenizer
     NEMO_AVAILABLE = True
 except ImportError:
     NEMO_AVAILABLE = False
@@ -74,19 +84,23 @@ class ModelFactory:
             logger.error(f"Failed to create model: {e}")
             return None
     
-    def setup_tokenizer(self, 
+    def setup_tokenizer(self,
                        model_type: str,
                        tokenizer_name_or_path: str) -> Optional[AutoTokenizer]:
         """
         Setup tokenizer for the model.
-        
+
         Args:
             model_type: Type of model
             tokenizer_name_or_path: Tokenizer name or path
-            
+
         Returns:
             Configured tokenizer
         """
+        if not TRANSFORMERS_AVAILABLE:
+            logger.error("Cannot setup tokenizer: transformers not available")
+            return None
+
         try:
             tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_name_or_path,
