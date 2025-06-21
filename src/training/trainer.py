@@ -8,18 +8,36 @@ from typing import Dict, Any, Optional, Union, List
 from pathlib import Path
 import torch
 
+# Check for PyTorch Lightning availability
 try:
     import pytorch_lightning as pl
     from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
     from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
-    from nemo.collections.nlp.models.language_modeling.megatron_gpt_model import MegatronGPTModel
-    from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
-    from nemo.core.config import hydra_runner
+    PYTORCH_LIGHTNING_AVAILABLE = True
+except ImportError:
+    PYTORCH_LIGHTNING_AVAILABLE = False
+    logging.warning("PyTorch Lightning not available. Training will be limited.")
+
+# Check for NeMo availability
+try:
+    import nemo
     from omegaconf import DictConfig, OmegaConf
     NEMO_AVAILABLE = True
 except ImportError:
     NEMO_AVAILABLE = False
-    logging.warning("NeMo or PyTorch Lightning not available. Training will be limited.")
+    logging.warning("NeMo not available. Training will be limited.")
+
+# Import specific NeMo components only when needed
+if NEMO_AVAILABLE:
+    try:
+        from nemo.collections.nlp.models.language_modeling.megatron_gpt_model import MegatronGPTModel
+        from nemo.collections.nlp.parts.nlp_overrides import NLPDDPStrategy
+        from nemo.core.config import hydra_runner
+    except ImportError as e:
+        logging.warning(f"Some NeMo components not available: {e}")
+
+# Overall availability check
+TRAINING_AVAILABLE = NEMO_AVAILABLE and PYTORCH_LIGHTNING_AVAILABLE
 
 # Import handling for both package and direct execution
 import sys
@@ -100,8 +118,13 @@ class NeMoTrainer:
             model_size: Size of model (7b, 8b, 13b, etc.)
             config_path: Optional path to custom configuration
         """
-        if not NEMO_AVAILABLE:
-            raise RuntimeError("NeMo and PyTorch Lightning are required for training")
+        if not TRAINING_AVAILABLE:
+            missing = []
+            if not NEMO_AVAILABLE:
+                missing.append("NeMo")
+            if not PYTORCH_LIGHTNING_AVAILABLE:
+                missing.append("PyTorch Lightning")
+            raise RuntimeError(f"Required packages not available: {', '.join(missing)}")
         
         self.model_type = model_type.lower()
         self.model_size = model_size.lower()
