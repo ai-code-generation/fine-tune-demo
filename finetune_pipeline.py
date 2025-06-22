@@ -168,26 +168,32 @@ class NeMo24FineTuningPipeline:
     def convert_to_nemo(self, hf_model_path: str) -> str:
         """Convert HuggingFace model to NeMo format using NeMo 24.07 tools."""
         nemo_model_path = self.models_dir / f"{self.model_name}_base.nemo"
-        
+
+        # Check if already converted
+        if nemo_model_path.exists():
+            logger.info(f"Using existing NeMo model: {nemo_model_path}")
+            return str(nemo_model_path)
+
         logger.info(f"Converting {hf_model_path} to NeMo format: {nemo_model_path}")
-        
+
         # NeMo 24.07 conversion script paths
         conversion_scripts = [
             "/opt/NeMo/scripts/checkpoint_converters/convert_hf_llama_to_nemo.py",
             "/opt/NeMo/scripts/nlp_language_modeling/convert_hf_llama_to_nemo.py",
             "/workspace/NeMo/scripts/checkpoint_converters/convert_hf_llama_to_nemo.py",
         ]
-        
+
         convert_script = None
         for script in conversion_scripts:
             if os.path.exists(script):
                 convert_script = script
                 logger.info(f"Found conversion script: {convert_script}")
                 break
-        
+
         if not convert_script:
-            logger.warning("No conversion script found, using HuggingFace model directly")
-            return hf_model_path
+            logger.error("No conversion script found. NeMo 24.07 requires .nemo format for fine-tuning.")
+            logger.error("Available conversion scripts should be in /opt/NeMo/scripts/checkpoint_converters/")
+            raise FileNotFoundError("NeMo conversion script not found. Cannot proceed without .nemo format.")
         
         # Build conversion command
         cmd = [
@@ -211,8 +217,8 @@ class NeMo24FineTuningPipeline:
             return str(nemo_model_path)
         except subprocess.CalledProcessError as e:
             logger.error(f"Model conversion failed: {e}")
-            logger.warning("Using HuggingFace model directly")
-            return hf_model_path
+            logger.error("NeMo 24.07 fine-tuning requires .nemo format. Conversion is mandatory.")
+            raise RuntimeError(f"Failed to convert model to .nemo format: {e}")
     
     def prepare_data(self, yaml_data_path: str, validation_split: float = 0.1) -> Tuple[str, str]:
         """Prepare training data from YAML format."""
@@ -400,14 +406,13 @@ class NeMo24FineTuningPipeline:
     
     def _update_config_for_model(self, config: Dict[str, Any], train_file: str, val_file: str, nemo_model_path: str):
         """Update configuration with model-specific settings."""
-        
-        # Set model path
-        if nemo_model_path.endswith('.nemo'):
-            config['model']['restore_from_path'] = nemo_model_path
-        else:
-            # Using HuggingFace model directly
-            config['model']['restore_from_path'] = None
-            config['model']['model_name_or_path'] = self.model_config['hf_model_name']
+
+        # Set model path - NeMo 24.07 fine-tuning requires .nemo format
+        if not nemo_model_path.endswith('.nemo'):
+            raise ValueError(f"NeMo 24.07 fine-tuning requires .nemo format, got: {nemo_model_path}")
+
+        config['model']['restore_from_path'] = nemo_model_path
+        logger.info(f"Using NeMo model for fine-tuning: {nemo_model_path}")
         
         # Set data files
         config['model']['data']['train_ds']['file_names'] = [train_file]
@@ -591,11 +596,8 @@ class NeMo24FineTuningPipeline:
             # Step 5: Run training
             adapter_path = self.run_training(config_file, max_steps)
 
-            # Step 6: Merge weights (if we have a .nemo base model)
-            if nemo_model_path.endswith('.nemo'):
-                final_model_path = self.merge_weights(nemo_model_path, adapter_path)
-            else:
-                final_model_path = adapter_path
+            # Step 6: Merge weights with .nemo base model
+            final_model_path = self.merge_weights(nemo_model_path, adapter_path)
 
             logger.info(f"Pipeline completed successfully! Final model: {final_model_path}")
             return final_model_path
