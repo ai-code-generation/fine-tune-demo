@@ -289,6 +289,27 @@ class NeMo24FineTuningPipeline:
                 "micro_batch_size": self.model_config["micro_batch_size"],
                 "global_batch_size": self.model_config["global_batch_size"],
                 "sequence_length": self.model_config.get("sequence_length", 4096),
+
+                # Required NeMo 24.07 parameters
+                "gradient_as_bucket_view": True,
+                "grad_allreduce_chunk_size_mb": 125,
+                "grad_div_ar_fusion": True,
+                "megatron_amp_O2": True,
+                "transformer_engine": True,
+                "fp8": False,
+                "fp8_e4m3": False,
+                "fp8_hybrid": False,
+                "fp8_margin": 0,
+                "fp8_interval": 1,
+                "fp8_amax_history_len": 1024,
+                "fp8_amax_compute_algo": "max",
+                "reduce_amax": True,
+                "use_emha": False,
+                "seed": 1234,
+                "use_cpu_initialization": False,
+                "onnx_safe": False,
+                "apex_transformer_log_level": 30,
+
                 "tokenizer": {
                     "library": "huggingface",
                     "type": self.model_config["hf_model_name"],
@@ -351,7 +372,29 @@ class NeMo24FineTuningPipeline:
                         "truncation_field": "input",
                         "data_impl": "jsonl",
                     }
-                }
+                },
+
+                # Additional required NeMo 24.07 parameters
+                "native_amp_init_scale": 4294967296,
+                "native_amp_growth_interval": 1000,
+                "hysteresis": 2,
+                "fp32_residual_connection": False,
+                "fp16_lm_cross_entropy": False,
+                "grad_sync_func": "collective",
+                "gradient_accumulation_fusion": True,
+                "bias_activation_fusion": True,
+                "bias_dropout_add_fusion": False,
+                "masked_softmax_fusion": True,
+                "activations_checkpoint_granularity": "selective",
+                "activations_checkpoint_method": None,
+                "activations_checkpoint_num_layers": None,
+                "num_micro_batches_with_partial_activation_checkpoints": None,
+                "activations_checkpoint_layers_per_pipeline": None,
+                "fsdp": False,
+                "fsdp_sharding_strategy": "full",
+                "fsdp_grad_reduce_dtype": 32,
+                "fsdp_sharded_checkpoint": False,
+                "sharp": False,
             }
         }
     
