@@ -20,7 +20,25 @@ export HF_TOKEN="your_token_here"
 ### Step 2: Start NeMo Container
 ```bash
 cd /static-data/team_08/simple-nemo/fine-tune-demo
-./run_nemo_container.sh
+
+# Create cache directories
+mkdir -p cache results models
+
+# Run container (without user restrictions to avoid permission issues)
+docker run --gpus all \
+  --shm-size=2g \
+  --net=host \
+  --ulimit memlock=-1 \
+  --rm -it \
+  -v ${PWD}:/workspace \
+  -w /workspace \
+  -v ${PWD}/results:/results \
+  -v ${PWD}/cache:/root/.cache \
+  -e HF_HOME=/workspace/cache/huggingface \
+  -e TRANSFORMERS_CACHE=/workspace/cache/transformers \
+  -e HF_DATASETS_CACHE=/workspace/cache/datasets \
+  nvcr.io/nvidia/nemo:24.07 \
+  bash
 ```
 
 ### Step 3: Run Fine-tuning (inside container)

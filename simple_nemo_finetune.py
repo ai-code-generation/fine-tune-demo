@@ -16,18 +16,29 @@ from pathlib import Path
 def download_model(model_name: str, hf_token: str):
     """Download model from HuggingFace."""
     print(f"📥 Downloading {model_name}...")
-    
+
     if model_name == "codellama-13b":
         repo_id = "meta-llama/CodeLlama-13b-hf"
         local_dir = "./codellama-13b-hf"
     else:
         raise ValueError(f"Unsupported model: {model_name}")
-    
+
     # Check if already downloaded
     if os.path.exists(local_dir):
         print(f"✅ Model already exists at {local_dir}")
         return local_dir
-    
+
+    # Set up cache directories
+    cache_dir = "./cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    os.makedirs(f"{cache_dir}/huggingface", exist_ok=True)
+    os.makedirs(f"{cache_dir}/transformers", exist_ok=True)
+
+    # Set environment variables for cache
+    os.environ["HF_HOME"] = f"{cache_dir}/huggingface"
+    os.environ["TRANSFORMERS_CACHE"] = f"{cache_dir}/transformers"
+    os.environ["HF_DATASETS_CACHE"] = f"{cache_dir}/datasets"
+
     # Download using huggingface_hub
     try:
         from huggingface_hub import snapshot_download
