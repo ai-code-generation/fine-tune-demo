@@ -82,9 +82,7 @@ def convert_to_nemo(hf_path: str, model_name: str):
         "python", "/opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py",
         f"--input_name_or_path={hf_path}",
         f"--output_path={nemo_path}",
-        "--precision=bf16",  # Add precision to avoid some config issues
-        "--tensor_model_parallel_size=1",  # Single GPU conversion
-        "--pipeline_model_parallel_size=1"
+        "--precision=bf16"  # Add precision to avoid some config issues
     ]
 
     try:

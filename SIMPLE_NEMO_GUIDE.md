@@ -176,9 +176,10 @@ python -c "from huggingface_hub import whoami; print(whoami())"
 python /opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py \
   --input_name_or_path=./codellama-13b-hf \
   --output_path=./codellama-13b.nemo \
-  --precision=bf16 \
-  --tensor_model_parallel_size=1 \
-  --pipeline_model_parallel_size=1
+  --precision=bf16
+
+# Check supported arguments:
+python /opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py --help
 ```
 
 ## 📚 Based on Official Documentation
