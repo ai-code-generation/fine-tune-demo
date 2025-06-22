@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   nemo-finetuning:
-    image: nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
-    container_name: nemo-finetuning-pipeline
+    image: nvcr.io/nvidia/nemo:24.07
+    container_name: nemo-finetuning-24.07
     
     # GPU configuration
     deploy:
@@ -22,6 +22,9 @@ services:
       - CUDA_VISIBLE_DEVICES=all
       - NCCL_DEBUG=INFO
       - PYTHONPATH=/workspace
+      - HF_TOKEN=${HF_TOKEN}
+      - TRANSFORMERS_CACHE=/workspace/.cache/transformers
+      - HF_HOME=/workspace/.cache/huggingface
     
     # Volume mounts
     volumes:
@@ -29,12 +32,13 @@ services:
       - /static-data/team_08/simple-nemo/fine-tune-demo/outputs:/workspace/outputs
       - /static-data/team_08/simple-nemo/fine-tune-demo/data:/workspace/data
       - /static-data/team_08/simple-nemo/fine-tune-demo/models:/workspace/models
+      - /static-data/team_08/simple-nemo/fine-tune-demo/.cache:/workspace/.cache
     
     # Working directory
     working_dir: /workspace
     
     # Shared memory and limits
-    shm_size: 8g
+    shm_size: 16g
     ulimits:
       memlock: -1
       stack: 67108864
@@ -42,13 +46,25 @@ services:
     # Port mappings
     ports:
       - "8888:8888"  # Jupyter Lab
+      - "6006:6006"  # TensorBoard
+      - "7007:7007"  # Additional services
 
     # Network configuration
     # network_mode: host  # Commented out to use port mapping
-    
+
     # Keep container running
     tty: true
     stdin_open: true
+
+    # Startup command
+    command: >
+      bash -c "
+        echo 'NeMo 24.07 Fine-tuning Environment Ready';
+        echo 'Supported: CodeLlama-13B, Llama3-8B/70B';
+        echo 'Host mount: /static-data/team_08/simple-nemo/fine-tune-demo';
+        echo 'Run: python finetune_pipeline.py --help';
+        /bin/bash
+      "
     
     # Command to run
     command: >
