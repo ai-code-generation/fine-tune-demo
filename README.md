@@ -7,6 +7,7 @@ A comprehensive pipeline for fine-tuning CodeLlama models (7B and 13B) using Hug
 - Support for CodeLlama 7B and 13B models
 - YAML-based training data format with conversation structure
 - LoRA (Low-Rank Adaptation) for memory-efficient fine-tuning
+- **Automatic LoRA model merging** - creates complete deployable models
 - **Self-contained Docker with CUDA** - no host CUDA installation required
 - Automated model output management
 - Instruction-tuning format conversion
@@ -177,6 +178,41 @@ python train.py --model-config configs/model_configs/codellama_7b.yaml \
                 --train-data data/train.yaml \
                 --resume-from-checkpoint output/checkpoint-500
 ```
+
+**Training without automatic model merging:**
+```bash
+python train.py --model-config configs/model_configs/codellama_7b.yaml \
+                --train-data data/train.yaml \
+                --no-merge
+```
+
+### Model Merging
+
+By default, the pipeline automatically merges the LoRA adapter with the base model after training to create a complete, deployable model. This merged model can be directly copied to production environments without requiring the original base model.
+
+**Automatic merging (default):**
+- Happens automatically after training completes
+- Creates a `merged_model/` directory in the output folder
+- Contains the complete model ready for deployment
+
+**Manual merging of existing LoRA models:**
+```bash
+# Merge an existing LoRA model with its base model
+python scripts/merge_lora_model.py --lora-model output/my_trained_model \
+                                   --output merged_models/my_production_model
+
+# Merge with specific configuration files
+python scripts/merge_lora_model.py --lora-model output/my_trained_model \
+                                   --output merged_models/my_production_model \
+                                   --model-config configs/model_configs/codellama_7b.yaml \
+                                   --lora-config configs/lora_configs/lora_default.yaml
+```
+
+**Benefits of merged models:**
+- ✅ **Self-contained** - no need for base model in production
+- ✅ **Faster inference** - no adapter overhead
+- ✅ **Simplified deployment** - single model directory
+- ✅ **Production ready** - includes tokenizer and model info
 
 ### Model Management
 

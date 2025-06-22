@@ -164,10 +164,37 @@ run_training() {
 # Function to create sample data
 create_sample_data() {
     print_header "Creating sample training data..."
-    
+
     docker exec -it codellama-finetune python train.py --create-sample-data
-    
+
     print_status "Sample data created in data/ directory"
+}
+
+# Function to merge LoRA model with base model
+merge_model() {
+    local lora_model=${1:-""}
+    local output_path=${2:-""}
+
+    if [ -z "$lora_model" ] || [ -z "$output_path" ]; then
+        echo "Enter merge parameters:"
+        read -p "LoRA model path: " lora_model
+        read -p "Output path for merged model: " output_path
+    fi
+
+    if [ -z "$lora_model" ] || [ -z "$output_path" ]; then
+        print_error "Both LoRA model path and output path are required"
+        return 1
+    fi
+
+    print_header "Merging LoRA model with base model..."
+    echo "  LoRA model: $lora_model"
+    echo "  Output path: $output_path"
+
+    docker exec -it codellama-finetune python scripts/merge_lora_model.py \
+        --lora-model "$lora_model" \
+        --output "$output_path"
+
+    print_status "Model merge completed"
 }
 
 
@@ -210,6 +237,7 @@ show_help() {
     echo "  train           - Run training with default settings"
     echo "  train-custom    - Run training with custom parameters"
     echo "  sample-data     - Create sample training data"
+    echo "  merge           - Merge LoRA model with base model"
     echo "  cleanup         - Clean up Docker resources"
     echo "  help            - Show this help message"
     echo
@@ -276,6 +304,9 @@ case "${1:-help}" in
         ;;
     sample-data)
         create_sample_data
+        ;;
+    merge)
+        merge_model "$2" "$3"
         ;;
     cleanup)
         cleanup

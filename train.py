@@ -81,6 +81,12 @@ def parse_arguments():
         default=None,
         help="Path to checkpoint to resume training from"
     )
+
+    parser.add_argument(
+        "--no-merge",
+        action="store_true",
+        help="Skip merging LoRA adapter with base model after training"
+    )
     
     parser.add_argument(
         "--validate-data",
@@ -211,7 +217,8 @@ def main():
         trainer = CodeLlamaTrainer(
             model_config_path=args.model_config,
             lora_config_path=args.lora_config,
-            output_dir=args.output_dir
+            output_dir=args.output_dir,
+            merge_after_training=not args.no_merge
         )
         
         # Run training

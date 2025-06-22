@@ -13,7 +13,7 @@ from transformers import (
     BitsAndBytesConfig,
     TrainingArguments
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, PeftModel
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +217,95 @@ class ModelSetup:
         logger.info(f"Trainable %: {100 * trainable_params / total_params:.2f}%")
         
         return model
-    
+
+    def merge_lora_with_base_model(self, model_path: str, output_path: str) -> str:
+        """
+        Merge LoRA adapter with base model to create a complete deployable model.
+
+        Args:
+            model_path: Path to the trained LoRA model directory
+            output_path: Path where the merged model should be saved
+
+        Returns:
+            Path to the merged model directory
+        """
+        from pathlib import Path
+
+        model_path = Path(model_path)
+        output_path = Path(output_path)
+
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model path not found: {model_path}")
+
+        # Create output directory
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        logger.info("Loading base model for merging...")
+
+        # Load the base model (without LoRA)
+        model_config = self.model_config['model']
+        base_model = AutoModelForCausalLM.from_pretrained(
+            model_config['name'],
+            torch_dtype=getattr(torch, model_config.get('torch_dtype', 'bfloat16')),
+            device_map=model_config.get('device_map', 'auto'),
+            trust_remote_code=model_config.get('trust_remote_code', True),
+            use_cache=model_config.get('use_cache', False)
+        )
+
+        logger.info("Loading LoRA adapter...")
+
+        # Load the LoRA model
+        lora_model = PeftModel.from_pretrained(base_model, model_path)
+
+        logger.info("Merging LoRA adapter with base model...")
+
+        # Merge the LoRA weights with the base model
+        merged_model = lora_model.merge_and_unload()
+
+        logger.info("Saving merged model...")
+
+        # Save the merged model
+        merged_model.save_pretrained(output_path, safe_serialization=True)
+
+        # Also save the tokenizer for completeness
+        logger.info("Saving tokenizer...")
+        tokenizer = self.setup_tokenizer()
+        tokenizer.save_pretrained(output_path)
+
+        # Create a model card with merge information
+        self._create_merge_info(model_path, output_path)
+
+        logger.info(f"Model successfully merged and saved to: {output_path}")
+
+        return str(output_path)
+
+    def _create_merge_info(self, lora_path: str, merged_path: str):
+        """Create information file about the merge process."""
+        import json
+        import time
+        from pathlib import Path
+
+        merge_info = {
+            "merge_timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "base_model": self.model_config['model']['name'],
+            "lora_model_path": str(lora_path),
+            "merged_model_path": str(merged_path),
+            "lora_config": self.lora_config['lora'],
+            "model_config": {
+                "torch_dtype": self.model_config['model'].get('torch_dtype', 'bfloat16'),
+                "device_map": self.model_config['model'].get('device_map', 'auto'),
+                "trust_remote_code": self.model_config['model'].get('trust_remote_code', True)
+            },
+            "merge_method": "merge_and_unload",
+            "description": "LoRA adapter merged with base model for production deployment"
+        }
+
+        info_path = Path(merged_path) / "merge_info.json"
+        with open(info_path, 'w', encoding='utf-8') as f:
+            json.dump(merge_info, f, indent=2)
+
+        logger.info(f"Merge information saved to: {info_path}")
+
     def setup_training_arguments(self, output_dir: str) -> TrainingArguments:
         """
         Setup training arguments from configuration.

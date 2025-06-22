@@ -68,22 +68,25 @@ class CustomDataCollator:
 class CodeLlamaTrainer:
     """Main trainer class for CodeLlama fine-tuning."""
     
-    def __init__(self, 
+    def __init__(self,
                  model_config_path: str,
                  lora_config_path: str,
-                 output_dir: str = "./output"):
+                 output_dir: str = "./output",
+                 merge_after_training: bool = True):
         """
         Initialize the trainer.
-        
+
         Args:
             model_config_path: Path to model configuration
             lora_config_path: Path to LoRA configuration
             output_dir: Directory to save outputs
+            merge_after_training: Whether to merge LoRA with base model after training
         """
         self.model_setup = ModelSetup(model_config_path, lora_config_path)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+        self.merge_after_training = merge_after_training
+
         # Initialize components
         self.tokenizer = None
         self.model = None
@@ -223,7 +226,13 @@ class CodeLlamaTrainer:
             logger.info("Saving final model...")
             self.trainer.save_model()
             self.trainer.save_state()
-            
+
+            # Merge LoRA with base model if requested
+            merged_model_path = None
+            if self.merge_after_training:
+                logger.info("Merging LoRA adapter with base model...")
+                merged_model_path = self._merge_model()
+
             # Calculate training time
             training_time = time.time() - start_time
             
@@ -235,7 +244,9 @@ class CodeLlamaTrainer:
                 "total_flos": train_result.metrics.get("total_flos", 0),
                 "train_loss": train_result.metrics.get("train_loss", 0),
                 "total_training_time": training_time,
-                "output_dir": str(self.output_dir)
+                "output_dir": str(self.output_dir),
+                "merged_model_path": merged_model_path,
+                "model_merged": self.merge_after_training
             }
             
             # Save training results
@@ -314,7 +325,34 @@ class CodeLlamaTrainer:
         logger.info(f"Samples per Second: {results['train_samples_per_second']:.2f}")
         logger.info(f"Steps per Second: {results['train_steps_per_second']:.2f}")
         logger.info(f"Model saved to: {results['output_dir']}")
+        if results.get('model_merged') and results.get('merged_model_path'):
+            logger.info(f"Merged model saved to: {results['merged_model_path']}")
         logger.info("=" * 60)
+
+    def _merge_model(self) -> str:
+        """
+        Merge LoRA adapter with base model to create a complete deployable model.
+
+        Returns:
+            Path to the merged model directory
+        """
+        # Create merged model directory
+        merged_dir = self.output_dir / "merged_model"
+
+        try:
+            # Use the model setup's merge functionality
+            merged_path = self.model_setup.merge_lora_with_base_model(
+                model_path=str(self.output_dir),
+                output_path=str(merged_dir)
+            )
+
+            logger.info(f"Model successfully merged and saved to: {merged_path}")
+            return merged_path
+
+        except Exception as e:
+            logger.error(f"Failed to merge model: {e}")
+            logger.warning("Continuing without merged model...")
+            return None
 
     def evaluate(self, eval_data_path: str) -> Dict[str, Any]:
         """
