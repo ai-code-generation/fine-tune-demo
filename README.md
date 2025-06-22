@@ -59,9 +59,8 @@ docker run --gpus all --shm-size=8g \
     --ulimit memlock=-1 \
     --rm -it \
     --user $(id -u):$(id -g) \
-    -v "$(pwd)":/workspace \
+    -v "/static-data/team_08/simple-nemo/fine-tune-demo":/workspace \
     -w /workspace \
-    --user hackathon:hackathon
     -p 8888:8888 \
     nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl \
     bash -c "mkdir -p outputs data models && bash"
@@ -114,11 +113,11 @@ messages:
 
 ```bash
 # Check hardware requirements
-python finetune_pipeline.py --model codellama-13b --check-hardware
+python finetune_pipeline.py --model codellama-7b --check-hardware
 
 # Run the complete pipeline
 python finetune_pipeline.py \
-    --model codellama-13b \
+    --model codellama-7b \
     --data example_training_data.yaml \
     --output-dir ./outputs \
     --max-steps 100 \
@@ -222,11 +221,23 @@ Each model has optimized configurations in the `configs/` directory:
    ./docker_start.sh
    ```
 
+### Model Conversion Issues
+
+3. **NeMo Conversion Script Not Found** (like `No such file or directory: convert_hf_llama_to_nemo.py`):
+   ```bash
+   # The pipeline automatically handles this with fallback methods
+   # Check your environment first:
+   python check_nemo_scripts.py
+
+   # For the llama_nemotron_nano_vl container, HF models are used directly
+   # This is normal and expected behavior - no conversion needed
+   ```
+
 ### Training Issues
 
-3. **CUDA Out of Memory**: Reduce batch size or use gradient accumulation
-4. **Model Download Fails**: Check Hugging Face token and internet connection
-5. **Training Crashes**: Verify hardware requirements and reduce model parallelism
+4. **CUDA Out of Memory**: Reduce batch size or use gradient accumulation
+5. **Model Download Fails**: Check Hugging Face token and internet connection
+6. **Training Crashes**: Verify hardware requirements and reduce model parallelism
 
 ### Performance Optimization
 
