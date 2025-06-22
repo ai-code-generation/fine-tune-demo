@@ -115,7 +115,7 @@ start_direct() {
         --ulimit memlock=-1 \
         --rm -it \
         --user "$USER_ID:$GROUP_ID" \
-        -v "$CURRENT_DIR:/workspace" \
+        -v "/static-data/team_08/simple-nemo/fine-tune-demo:/workspace" \
         -w /workspace \
         -p 8888:8888 \
         "$NEMO_IMAGE" \
