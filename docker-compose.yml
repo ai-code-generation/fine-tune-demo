@@ -71,7 +71,6 @@ services:
       bash -c "
         echo 'NeMo Fine-tuning Pipeline Container Started';
         echo 'Creating necessary directories...';
-        mkdir -p outputs data models;
         echo 'Available models:';
         python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet';
         echo 'Starting Jupyter Lab...';
