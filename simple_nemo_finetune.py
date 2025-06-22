@@ -101,33 +101,40 @@ def convert_to_nemo(hf_path: str, model_name: str):
 def prepare_data(yaml_file: str):
     """Convert YAML training data to JSONL format and split."""
     print(f"📝 Preparing data from {yaml_file}...")
-    
-    # Load YAML data
-    with open(yaml_file, 'r') as f:
-        data = yaml.safe_load(f)
-    
-    # Convert to JSONL format
+
+    # Load YAML data (handle multiple documents)
     jsonl_data = []
-    for item in data.get('messages', []):
-        if len(item) >= 2:
+    with open(yaml_file, 'r') as f:
+        # Load all YAML documents in the file
+        documents = list(yaml.safe_load_all(f))
+
+    # Process each document
+    for doc in documents:
+        if doc is None:
+            continue
+
+        # Convert to JSONL format
+        messages = doc.get('messages', [])
+        if len(messages) >= 2:
             # Find user and assistant messages
             user_msg = None
             assistant_msg = None
-            
-            for msg in item:
+
+            for msg in messages:
                 if msg.get('role') == 'user':
                     user_msg = msg.get('content', '')
                 elif msg.get('role') == 'assistant':
                     assistant_msg = msg.get('content', '')
-            
+
             if user_msg and assistant_msg:
                 jsonl_data.append({
                     'input': user_msg,
                     'output': assistant_msg
                 })
-    
+
     if not jsonl_data:
         print("❌ No valid training data found")
+        print("💡 Make sure your YAML file contains 'messages' with 'user' and 'assistant' roles")
         sys.exit(1)
     
     # Shuffle data
