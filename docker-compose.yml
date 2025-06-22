@@ -26,7 +26,7 @@ services:
     # Volume mounts
     volumes:
       - /static-data/team_08/simple-nemo/fine-tune-demo:/workspace
-      - /static-data/team_08/simple-nemo/fine-tune-demo/outputs:/workspace/results
+      - /static-data/team_08/simple-nemo/fine-tune-demo/outputs:/workspace/outputs
       - /static-data/team_08/simple-nemo/fine-tune-demo/data:/workspace/data
       - /static-data/team_08/simple-nemo/fine-tune-demo/models:/workspace/models
     

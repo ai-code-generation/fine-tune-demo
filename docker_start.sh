@@ -82,7 +82,7 @@ start_with_compose() {
     print_step "Starting container with Docker Compose..."
     
     if [ -f "docker-compose.yml" ]; then
-        docker-compose up -d nemo-finetuning
+        docker compose up -d nemo-finetuning
         print_status "Container started with Docker Compose ✓"
         print_status "Jupyter Lab available at: http://localhost:8888"
         print_status "To connect to container: docker-compose exec nemo-finetuning bash"
