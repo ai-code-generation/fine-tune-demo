@@ -24,16 +24,37 @@ def load_yaml_data(yaml_file: str) -> List[Dict[str, Any]]:
     """Load conversation data from YAML file."""
     try:
         with open(yaml_file, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-        
-        # Handle both single conversation and list of conversations
-        if isinstance(data, dict) and 'messages' in data:
-            return [data]
-        elif isinstance(data, list):
-            return data
-        else:
-            raise ValueError("Invalid YAML format. Expected 'messages' key or list of conversations.")
-            
+            # Use safe_load_all to handle multiple YAML documents separated by ---
+            documents = list(yaml.safe_load_all(f))
+
+        conversations = []
+        for doc in documents:
+            if doc is None:  # Skip empty documents
+                continue
+
+            if isinstance(doc, dict) and 'messages' in doc:
+                # Validate that messages is a list
+                if isinstance(doc['messages'], list) and len(doc['messages']) > 0:
+                    conversations.append(doc)
+                else:
+                    logger.warning(f"Skipping document with invalid messages format")
+            elif isinstance(doc, list):
+                # If document is a list, extend conversations
+                for item in doc:
+                    if isinstance(item, dict) and 'messages' in item:
+                        conversations.append(item)
+                    else:
+                        logger.warning(f"Skipping invalid item in list: {type(item)}")
+            else:
+                logger.warning(f"Skipping invalid document format: {type(doc)}")
+                continue
+
+        if not conversations:
+            raise ValueError("No valid conversations found in YAML file. Expected documents with 'messages' key.")
+
+        logger.info(f"Loaded {len(conversations)} conversations from {len(documents)} YAML documents")
+        return conversations
+
     except Exception as e:
         logger.error(f"Error loading YAML file {yaml_file}: {e}")
         raise
