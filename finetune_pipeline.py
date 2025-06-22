@@ -453,6 +453,9 @@ class NeMo24FineTuningPipeline:
         # Determine training script and command for NeMo 24.07
         # Based on actual NeMo 24.07 container structure
         training_scripts = [
+            # Legacy PEFT script names (may not exist in 24.07)
+            "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_peft_tuning.py",
+            "/workspace/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_peft_tuning.py",
             # Primary NeMo 24.07 fine-tuning script (confirmed available)
             "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
             "/workspace/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
