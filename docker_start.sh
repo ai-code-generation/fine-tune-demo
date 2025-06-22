@@ -225,7 +225,6 @@ main() {
     
     # Check prerequisites
     check_docker
-    check_nvidia_docker
     check_hf_token
     
     echo ""
