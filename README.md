@@ -34,19 +34,33 @@ A comprehensive fine-tuning pipeline for CodeLlama and Llama3 models using NVIDI
 
 ### 1. Setup Environment
 
-#### Option A: Using NeMo Container (Recommended)
+#### Option A: Using Docker Compose (Recommended)
+
+```bash
+# Easy startup with the provided script
+./docker_start.sh
+
+# Or manually with docker-compose
+docker-compose up nemo-finetuning
+
+# Access Jupyter Lab at http://localhost:8888
+# Or connect to the container to run scripts
+docker-compose exec nemo-finetuning bash
+```
+
+#### Option B: Using NeMo Container Directly
 
 ```bash
 # Pull the NeMo container
-docker pull nvcr.io/nvidia/nemo:24.01
+docker pull nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
 
 # Run the container
 docker run --gpus all --shm-size=8g --net=host --ulimit memlock=-1 \
     --rm -it -v ${PWD}:/workspace -w /workspace \
-    nvcr.io/nvidia/nemo:24.01
+    nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
 ```
 
-#### Option B: Local Installation
+#### Option C: Local Installation
 
 ```bash
 # Clone this repository

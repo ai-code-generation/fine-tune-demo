@@ -35,11 +35,12 @@ print_step() {
 # Check if running in NeMo container
 check_environment() {
     print_step "Checking environment..."
-    
-    if [ -f "/opt/NeMo/README.rst" ]; then
+
+    if [ -f "/opt/NeMo/README.rst" ] || [ -f "/opt/NeMo/README.md" ] || command -v nemo_run &> /dev/null; then
         print_status "Running in NeMo container ✓"
     else
         print_warning "Not running in NeMo container. Make sure NeMo Framework is installed."
+        print_warning "You can start the container with: ./docker_start.sh"
     fi
     
     # Check for GPU

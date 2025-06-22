@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   nemo-finetuning:
-    image: nvcr.io/nvidia/nemo:24.01
+    image: nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
     container_name: nemo-finetuning-pipeline
     
     # GPU configuration
@@ -22,10 +22,10 @@ services:
     
     # Volume mounts
     volumes:
-      - /static-data/team_08/simple-nemo/fine-tune-demo:/workspace
-      - /static-data/team_08/simple-nemo/fine-tune-demo/outputs:/workspace/results
-      - /static-data/team_08/simple-nemo/fine-tune-demo/data:/workspace/data
-      - /static-data/team_08/simple-nemo/fine-tune-demo/models:/workspace/models
+      - .:/workspace
+      - ./outputs:/results
+      - ./data:/data
+      - ./models:/models
     
     # Working directory
     working_dir: /workspace
@@ -36,8 +36,12 @@ services:
       memlock: -1
       stack: 67108864
     
+    # Port mappings
+    ports:
+      - "8888:8888"  # Jupyter Lab
+
     # Network configuration
-    network_mode: host
+    # network_mode: host  # Commented out to use port mapping
     
     # Keep container running
     tty: true
@@ -50,6 +54,7 @@ services:
         echo 'Available models:';
         python -c 'from configs.model_configs import list_available_models; print(list_available_models())';
         echo 'Starting Jupyter Lab...';
+        jupyter lab --no-browser --port=8888 --allow-root --ip=0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
       "
 
 # Optional: Networks configuration
