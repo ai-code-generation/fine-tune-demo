@@ -68,6 +68,27 @@ MODEL_CONFIGS = {
         "sequence_length": 4096,
         "model_type": "llama",
     },
+
+    # StarCoder2 models (no HF access approval required)
+    "starcoder2-15b": {
+        "hf_model_name": "bigcode/starcoder2-15b",
+        "num_layers": 40,
+        "hidden_size": 6144,
+        "ffn_hidden_size": 24576,
+        "num_attention_heads": 48,
+        "num_query_groups": 48,
+        "max_position_embeddings": 16384,
+        "tensor_model_parallel_size": 2,
+        "pipeline_model_parallel_size": 1,
+        "devices": 4,
+        "num_nodes": 1,
+        "micro_batch_size": 1,
+        "global_batch_size": 8,
+        "adapter_dim": 32,
+        "learning_rate": 1e-4,
+        "sequence_length": 4096,
+        "model_type": "starcoder2",
+    },
 }
 
 # Hardware requirements for each model
@@ -95,6 +116,14 @@ HARDWARE_REQUIREMENTS = {
         "recommended_gpus": 16,
         "min_system_ram_gb": 256,
         "recommended_system_ram_gb": 512,
+    },
+    "starcoder2-15b": {
+        "min_gpu_memory_gb": 24,
+        "recommended_gpu_memory_gb": 40,
+        "min_gpus": 4,
+        "recommended_gpus": 8,
+        "min_system_ram_gb": 64,
+        "recommended_system_ram_gb": 128,
     },
 }
 
@@ -171,6 +200,8 @@ def get_training_config_template(model_name: str) -> str:
     """Get the appropriate training configuration template for the model."""
     if "codellama" in model_name.lower():
         return "configs/codellama_13b_config.yaml"
+    elif "starcoder2" in model_name.lower():
+        return "configs/starcoder2_15b_config.yaml"
     elif "llama3" in model_name.lower():
         if "8b" in model_name.lower():
             return "configs/llama3_8b_config.yaml"

@@ -102,23 +102,28 @@ class NeMo24FineTuningPipeline:
         
         logger.info(f"Downloading model {hf_model_name} to {model_dir}")
         
-        if not hf_token:
-            logger.error("Hugging Face token is required for model download")
+        # Check if token is required for this model
+        gated_models = ["meta-llama/CodeLlama-13b-hf", "meta-llama/Meta-Llama-3-8B", "meta-llama/Meta-Llama-3-70B"]
+        if hf_model_name in gated_models and not hf_token:
+            logger.error(f"Hugging Face token is required for gated model: {hf_model_name}")
             logger.error("Get a token from: https://huggingface.co/settings/tokens")
             logger.error("For gated models, make sure you have access approval")
-            raise ValueError("Hugging Face token is required")
+            raise ValueError("Hugging Face token is required for gated models")
         
         # Use huggingface_hub for reliable downloads
         try:
             from huggingface_hub import snapshot_download
             logger.info("Using huggingface_hub for model download...")
             
-            snapshot_download(
-                repo_id=hf_model_name,
-                local_dir=str(model_dir),
-                token=hf_token,
-                local_dir_use_symlinks=False
-            )
+            download_kwargs = {
+                "repo_id": hf_model_name,
+                "local_dir": str(model_dir),
+                "local_dir_use_symlinks": False
+            }
+            if hf_token:
+                download_kwargs["token"] = hf_token
+
+            snapshot_download(**download_kwargs)
             
             logger.info(f"Successfully downloaded model to {model_dir}")
             return str(model_dir)
@@ -129,12 +134,15 @@ class NeMo24FineTuningPipeline:
             
             # Try again after installation
             from huggingface_hub import snapshot_download
-            snapshot_download(
-                repo_id=hf_model_name,
-                local_dir=str(model_dir),
-                token=hf_token,
-                local_dir_use_symlinks=False
-            )
+            download_kwargs = {
+                "repo_id": hf_model_name,
+                "local_dir": str(model_dir),
+                "local_dir_use_symlinks": False
+            }
+            if hf_token:
+                download_kwargs["token"] = hf_token
+
+            snapshot_download(**download_kwargs)
             
             logger.info(f"Successfully downloaded model to {model_dir}")
             return str(model_dir)
@@ -390,8 +398,16 @@ class NeMo24FineTuningPipeline:
         with open(config_file, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
-        # Determine training script and command
+        # Determine training script and command for NeMo 24.07
+        # Based on actual NeMo 24.07 container structure
         training_scripts = [
+            # Primary NeMo 24.07 fine-tuning script (confirmed available)
+            "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
+            "/workspace/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
+            # Alternative locations
+            "/usr/local/lib/python3.10/dist-packages/nemo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
+            "/opt/conda/lib/python3.10/site-packages/nemo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
+            # Legacy PEFT script names (may not exist in 24.07)
             "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_peft_tuning.py",
             "/workspace/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_peft_tuning.py",
         ]
@@ -555,14 +571,21 @@ def main():
         return 1
 
     # Check for HF token for gated models
-    if not args.hf_token:
-        hf_token = os.environ.get('HF_TOKEN')
-        if not hf_token:
-            logger.error("Hugging Face token is required for downloading gated models")
-            logger.error("Provide it via --hf-token argument or HF_TOKEN environment variable")
-            logger.error("Get a token from: https://huggingface.co/settings/tokens")
-            return 1
-        args.hf_token = hf_token
+    gated_models = ["codellama-13b", "llama3-8b", "llama3-70b"]
+    if args.model in gated_models:
+        if not args.hf_token:
+            hf_token = os.environ.get('HF_TOKEN')
+            if not hf_token:
+                logger.error(f"Hugging Face token is required for gated model: {args.model}")
+                logger.error("Provide it via --hf-token argument or HF_TOKEN environment variable")
+                logger.error("Get a token from: https://huggingface.co/settings/tokens")
+                return 1
+            args.hf_token = hf_token
+    else:
+        # For non-gated models, token is optional
+        if not args.hf_token:
+            args.hf_token = os.environ.get('HF_TOKEN')
+        logger.info(f"Model {args.model} does not require HF token (not gated)")
 
     try:
         # Initialize pipeline
