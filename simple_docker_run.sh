@@ -60,11 +60,6 @@ print_info "✓ Docker and NVIDIA drivers are available"
 # Step 2: Set up environment
 print_step "2. Setting up environment..."
 
-cd "$HOST_PATH" || {
-    print_error "Cannot access $HOST_PATH"
-    exit 1
-}
-
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
     print_info "Creating .env file..."
@@ -139,6 +134,9 @@ docker run -it --rm \
   -e PYTHONPATH="$CONTAINER_PATH" \
   -e TRANSFORMERS_CACHE="$CONTAINER_PATH/.cache/transformers" \
   -e HF_HOME="$CONTAINER_PATH/.cache/huggingface" \
+  -e HF_DATASETS_CACHE="$CONTAINER_PATH/.cache/datasets" \
+  -e TORCH_HOME="$CONTAINER_PATH/.cache/torch" \
+  -e XDG_CACHE_HOME="$CONTAINER_PATH/.cache" \
   -w "$CONTAINER_PATH" \
   -p 8888:8888 \
   -p 6006:6006 \
@@ -150,6 +148,11 @@ docker run -it --rm \
     echo '  Host mount: $HOST_PATH';
     echo '  User: $(id -u):$(id -g)';
     echo '  GPUs: Available';
+    echo '';
+    echo 'Setting up cache directories...';
+    mkdir -p $CONTAINER_PATH/.cache/{transformers,huggingface,datasets,torch};
+    chown -R $(id -u):$(id -g) $CONTAINER_PATH/.cache 2>/dev/null || true;
+    echo 'Cache directories ready ✓';
     echo '';
     echo 'Available commands:';
     echo '  ./quick_start.sh                    # Interactive setup';

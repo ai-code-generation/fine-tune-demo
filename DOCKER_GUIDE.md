@@ -202,6 +202,10 @@ ls -la outputs/experiments/
 ```bash
 # Fix permissions if needed
 sudo chown -R $(id -u):$(id -g) /static-data/team_08/simple-nemo/fine-tune-demo
+
+# Fix cache permissions specifically
+mkdir -p /static-data/team_08/simple-nemo/fine-tune-demo/.cache
+sudo chown -R $(id -u):$(id -g) /static-data/team_08/simple-nemo/fine-tune-demo/.cache
 ```
 
 ### **GPU Memory Issues**
@@ -211,6 +215,20 @@ nvidia-smi
 
 # Use smaller batch size in config files
 # Edit: micro_batch_size: 1, global_batch_size: 4
+```
+
+### **Cache Permission Issues**
+```bash
+# If you get "Permission denied: '/.cache'" error:
+# 1. Make sure you're using --user flag
+# 2. Create cache directory with proper permissions
+mkdir -p .cache/{huggingface,transformers,datasets,torch}
+chmod -R 755 .cache
+
+# 3. Set environment variables
+export TRANSFORMERS_CACHE=/workspace/.cache/transformers
+export HF_HOME=/workspace/.cache/huggingface
+export XDG_CACHE_HOME=/workspace/.cache
 ```
 
 ### **HuggingFace Access Issues**

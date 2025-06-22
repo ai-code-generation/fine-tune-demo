@@ -25,6 +25,9 @@ services:
       - HF_TOKEN=${HF_TOKEN}
       - TRANSFORMERS_CACHE=/workspace/.cache/transformers
       - HF_HOME=/workspace/.cache/huggingface
+      - HF_DATASETS_CACHE=/workspace/.cache/datasets
+      - TORCH_HOME=/workspace/.cache/torch
+      - XDG_CACHE_HOME=/workspace/.cache
     
     # Volume mounts
     volumes:
@@ -62,6 +65,10 @@ services:
         echo 'NeMo 24.07 Fine-tuning Environment Ready';
         echo 'Supported: CodeLlama-13B, Llama3-8B/70B';
         echo 'Host mount: /static-data/team_08/simple-nemo/fine-tune-demo';
+        echo 'Setting up cache directories...';
+        mkdir -p /workspace/.cache/{transformers,huggingface,datasets,torch};
+        chown -R \$(id -u):\$(id -g) /workspace/.cache 2>/dev/null || true;
+        echo 'Cache directories ready ✓';
         echo 'Available models:';
         python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet';
         echo 'Quick start: ./quick_start.sh';

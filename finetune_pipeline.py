@@ -43,7 +43,8 @@ class NeMo24FineTuningPipeline:
         self.logs_dir = self.output_dir / "logs"
         
         self._create_directories()
-        
+        self._setup_cache_directories()
+
         logger.info(f"Initialized NeMo 24.07 pipeline for {model_name}")
         logger.info(f"Output directory: {self.output_dir}")
     
@@ -57,6 +58,42 @@ class NeMo24FineTuningPipeline:
                 logger.error(f"Permission denied creating directory: {dir_path}")
                 logger.error("Make sure you have write permissions to the output directory")
                 raise
+
+    def _setup_cache_directories(self):
+        """Setup cache directories with proper permissions to avoid permission errors."""
+        import os
+
+        # Define cache directories in workspace
+        workspace_cache = os.path.abspath("./.cache")
+        cache_subdirs = ["huggingface", "transformers", "datasets", "torch"]
+
+        # Create cache directories
+        for subdir in cache_subdirs:
+            cache_dir = os.path.join(workspace_cache, subdir)
+            try:
+                os.makedirs(cache_dir, exist_ok=True)
+                # Try to set permissions
+                os.chmod(cache_dir, 0o755)
+            except (OSError, PermissionError) as e:
+                logger.warning(f"Could not create/set permissions for {cache_dir}: {e}")
+
+        # Set environment variables to use workspace cache
+        os.environ["TRANSFORMERS_CACHE"] = f"{workspace_cache}/transformers"
+        os.environ["HF_HOME"] = f"{workspace_cache}/huggingface"
+        os.environ["HF_DATASETS_CACHE"] = f"{workspace_cache}/datasets"
+        os.environ["TORCH_HOME"] = f"{workspace_cache}/torch"
+        os.environ["XDG_CACHE_HOME"] = workspace_cache
+
+        # Also try to create user cache directories as fallback
+        try:
+            user_cache = os.path.expanduser("~/.cache")
+            for subdir in cache_subdirs:
+                user_cache_dir = os.path.join(user_cache, subdir)
+                os.makedirs(user_cache_dir, exist_ok=True)
+        except (OSError, PermissionError):
+            pass  # Ignore if we can't create user cache
+
+        logger.info(f"Cache directories configured to use: {workspace_cache}")
     
     def download_model(self, hf_token: Optional[str] = None) -> str:
         """Download the base model from Hugging Face using NeMo 24.07 methods."""
