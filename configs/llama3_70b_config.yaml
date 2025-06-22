@@ -140,6 +140,7 @@ model:
   megatron_amp_O2: True
   grad_allreduce_chunk_size_mb: 125
   grad_div_ar_fusion: True
+  gradient_as_bucket_view: False
 
   # Fusion
   grad_sync_func: collective

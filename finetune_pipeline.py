@@ -291,7 +291,7 @@ class NeMo24FineTuningPipeline:
                 "sequence_length": self.model_config.get("sequence_length", 4096),
 
                 # Required NeMo 24.07 parameters
-                "gradient_as_bucket_view": True,
+                "gradient_as_bucket_view": False,
                 "grad_allreduce_chunk_size_mb": 125,
                 "grad_div_ar_fusion": True,
                 "megatron_amp_O2": True,
