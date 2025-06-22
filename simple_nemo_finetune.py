@@ -64,19 +64,40 @@ def convert_to_nemo(hf_path: str, model_name: str):
         return nemo_path
     
     print(f"🔄 Converting {hf_path} to {nemo_path}...")
-    
+
+    # Check GPU availability
+    try:
+        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("⚠️  Warning: nvidia-smi failed, but continuing conversion...")
+    except FileNotFoundError:
+        print("⚠️  Warning: nvidia-smi not found, but continuing conversion...")
+
+    # Set environment variables for conversion
+    env = os.environ.copy()
+    env["CUDA_VISIBLE_DEVICES"] = "0"  # Use first GPU
+    env["CUDA_LAUNCH_BLOCKING"] = "1"  # For better error reporting
+
     cmd = [
         "python", "/opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py",
         f"--input_name_or_path={hf_path}",
-        f"--output_path={nemo_path}"
+        f"--output_path={nemo_path}",
+        "--precision=bf16",  # Add precision to avoid some config issues
+        "--tensor_model_parallel_size=1",  # Single GPU conversion
+        "--pipeline_model_parallel_size=1"
     ]
-    
+
     try:
-        subprocess.run(cmd, check=True)
+        print(f"Running conversion command: {' '.join(cmd)}")
+        subprocess.run(cmd, check=True, env=env)
         print(f"✅ Converted to {nemo_path}")
         return nemo_path
     except subprocess.CalledProcessError as e:
         print(f"❌ Conversion failed: {e}")
+        print("💡 Troubleshooting tips:")
+        print("   1. Make sure you're running inside the NeMo container with GPU access")
+        print("   2. Check if GPUs are visible: nvidia-smi")
+        print("   3. Try running the container with: docker run --gpus all ...")
         sys.exit(1)
 
 def prepare_data(yaml_file: str):
@@ -190,27 +211,54 @@ def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: i
         print(f"❌ Fine-tuning failed: {e}")
         sys.exit(1)
 
+def check_gpu_access():
+    """Check if GPUs are accessible."""
+    try:
+        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ GPU access confirmed")
+            # Count GPUs
+            gpu_count = result.stdout.count("GeForce") + result.stdout.count("Tesla") + result.stdout.count("A100") + result.stdout.count("V100")
+            if gpu_count == 0:
+                # Try a different way to count GPUs
+                gpu_lines = [line for line in result.stdout.split('\n') if 'MiB' in line and '%' in line]
+                gpu_count = len(gpu_lines)
+            print(f"📊 Detected {gpu_count} GPU(s)")
+            return True
+        else:
+            print("❌ nvidia-smi failed")
+            return False
+    except FileNotFoundError:
+        print("❌ nvidia-smi not found")
+        return False
+
 def main():
     parser = argparse.ArgumentParser(description="Simple NeMo 24.07 Fine-tuning for CodeLlama-13B")
     parser.add_argument("--data", required=True, help="Path to YAML training data")
     parser.add_argument("--hf-token", help="HuggingFace token (or set HF_TOKEN env var)")
     parser.add_argument("--max-steps", type=int, default=50, help="Maximum training steps")
     parser.add_argument("--model", default="codellama-13b", help="Model to fine-tune")
-    
+
     args = parser.parse_args()
-    
+
     # Get HF token
     hf_token = args.hf_token or os.environ.get('HF_TOKEN')
     if not hf_token:
         print("❌ HuggingFace token required. Use --hf-token or set HF_TOKEN env var")
         sys.exit(1)
-    
+
     # Check if we're in NeMo container
     if not os.path.exists('/opt/NeMo'):
         print("❌ This script must be run inside NeMo 24.07 container")
         print("Run: docker run --gpus all --shm-size=2g --net=host --ulimit memlock=-1 --rm -it \\")
         print("  -v ${PWD}:/workspace -w /workspace -v ${PWD}/results:/results \\")
         print("  nvcr.io/nvidia/nemo:24.07 bash")
+        sys.exit(1)
+
+    # Check GPU access
+    if not check_gpu_access():
+        print("❌ GPU access required for NeMo model conversion and training")
+        print("💡 Make sure to run container with: docker run --gpus all ...")
         sys.exit(1)
     
     print("🎯 Simple NeMo 24.07 Fine-tuning Pipeline")

@@ -41,7 +41,21 @@ docker run --gpus all \
   bash
 ```
 
-### Step 3: Run Fine-tuning (inside container)
+### Step 3: Check GPU Access (inside container)
+```bash
+# Verify GPU access
+nvidia-smi
+
+# Should show your GPUs, e.g.:
+# +-----------------------------------------------------------------------------+
+# | NVIDIA-SMI 525.xx.xx    Driver Version: 525.xx.xx    CUDA Version: 12.0   |
+# |-------------------------------+----------------------+----------------------+
+# | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+# | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+# |   0  Tesla V100-SXM2...  Off  | 00000000:00:04.0 Off |                    0 |
+```
+
+### Step 4: Run Fine-tuning (inside container)
 ```bash
 # Set your HF token inside container
 export HF_TOKEN="your_token_here"
@@ -53,7 +67,7 @@ python simple_nemo_finetune.py \
   --hf-token $HF_TOKEN
 ```
 
-### Step 4: Check Results (inside container)
+### Step 5: Check Results (inside container)
 ```bash
 # List results
 ls -la /results/
@@ -65,7 +79,7 @@ ls -la /results/checkpoints/
 ls -la /results/checkpoints/megatron_gpt_peft_lora_tuning.nemo
 ```
 
-### Step 5: Test the Model (inside container)
+### Step 6: Test the Model (inside container)
 ```bash
 # Run inference test
 python /opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_generate.py \
@@ -121,6 +135,20 @@ The script uses these **official NeMo settings**:
 
 ## 🐛 Troubleshooting
 
+### CUDA/GPU Issues
+```bash
+# Check if GPUs are visible in container
+nvidia-smi
+
+# If "CUDA error: no CUDA-capable device is detected":
+# 1. Make sure you're using --gpus all in docker run
+# 2. Check host GPU access: nvidia-smi (outside container)
+# 3. Restart Docker daemon if needed: sudo systemctl restart docker
+
+# If "enable_cuda_graph" error:
+# This is fixed in the updated conversion script with proper parameters
+```
+
 ### Container Issues
 ```bash
 # If container fails to start
@@ -140,6 +168,17 @@ nvidia-docker run --rm nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi
 ```bash
 # Test HF token
 python -c "from huggingface_hub import whoami; print(whoami())"
+```
+
+### Conversion Issues
+```bash
+# If model conversion fails, try manual conversion:
+python /opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py \
+  --input_name_or_path=./codellama-13b-hf \
+  --output_path=./codellama-13b.nemo \
+  --precision=bf16 \
+  --tensor_model_parallel_size=1 \
+  --pipeline_model_parallel_size=1
 ```
 
 ## 📚 Based on Official Documentation
