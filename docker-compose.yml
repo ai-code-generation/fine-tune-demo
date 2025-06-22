@@ -14,6 +14,9 @@ services:
               count: all
               capabilities: [gpu]
     
+    # User configuration for proper permissions
+    user: "${UID:-1000}:${GID:-1000}"
+
     # Environment variables
     environment:
       - CUDA_VISIBLE_DEVICES=all
@@ -22,10 +25,10 @@ services:
     
     # Volume mounts
     volumes:
-      - .:/workspace
-      - ./outputs:/results
-      - ./data:/data
-      - ./models:/models
+      - /static-data/team_08/simple-nemo/fine-tune-demo:/workspace
+      - /static-data/team_08/simple-nemo/fine-tune-demo/outputs:/workspace/results
+      - /static-data/team_08/simple-nemo/fine-tune-demo/data:/workspace/data
+      - /static-data/team_08/simple-nemo/fine-tune-demo/models:/workspace/models
     
     # Working directory
     working_dir: /workspace
@@ -51,10 +54,11 @@ services:
     command: >
       bash -c "
         echo 'NeMo Fine-tuning Pipeline Container Started';
+        echo 'Creating necessary directories...';
+        mkdir -p outputs data models;
         echo 'Available models:';
-        python -c 'from configs.model_configs import list_available_models; print(list_available_models())';
+        python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet';
         echo 'Starting Jupyter Lab...';
-        jupyter lab --no-browser --port=8888 --allow-root --ip=0.0.0.0 --NotebookApp.token='' --NotebookApp.password=''
       "
 
 # Optional: Networks configuration

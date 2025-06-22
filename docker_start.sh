@@ -106,20 +106,35 @@ start_direct() {
         print_warning "Running without GPU support"
     fi
     
+    # Get current user ID and group ID for proper permissions
+    USER_ID=$(id -u)
+    GROUP_ID=$(id -g)
+
     docker run $GPU_ARGS \
         --shm-size=8g \
         --ulimit memlock=-1 \
         --rm -it \
-        -v "${PWD}:/workspace" \
+        --user "$USER_ID:$GROUP_ID" \
+        -v "$CURRENT_DIR:/workspace" \
         -w /workspace \
         -p 8888:8888 \
         "$NEMO_IMAGE" \
         bash -c "
             echo 'NeMo Fine-tuning Pipeline Container Started';
+            echo 'Creating necessary directories...';
+            mkdir -p outputs data models;
+            echo 'Current directory contents:';
+            ls -la;
+            echo '';
+            echo 'Checking for pipeline files:';
+            ls -la *.py *.sh *.yaml *.yml 2>/dev/null || echo 'No pipeline files found';
+            echo '';
             echo 'Available models:';
-            python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet';
+            python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet - run: cd /workspace && python -c \"from configs.model_configs import list_available_models; print(list_available_models())\"';
+            echo '';
             echo 'Starting interactive shell...';
             echo 'To start Jupyter Lab: jupyter lab --no-browser --port=8888 --allow-root --ip=0.0.0.0';
+            echo 'To run quick start: ./quick_start.sh';
             bash
         "
 }

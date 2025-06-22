@@ -54,10 +54,17 @@ docker-compose exec nemo-finetuning bash
 # Pull the NeMo container
 docker pull nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
 
-# Run the container
-docker run --gpus all --shm-size=8g --net=host --ulimit memlock=-1 \
-    --rm -it -v ${PWD}:/workspace -w /workspace \
-    nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl
+# Run the container with proper permissions
+docker run --gpus all --shm-size=8g \
+    --ulimit memlock=-1 \
+    --rm -it \
+    --user $(id -u):$(id -g) \
+    -v "$(pwd)":/workspace \
+    -w /workspace \
+    --user hackathon:hackathon
+    -p 8888:8888 \
+    nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl \
+    bash -c "mkdir -p outputs data models && bash"
 ```
 
 #### Option C: Local Installation
@@ -112,7 +119,7 @@ python finetune_pipeline.py --model codellama-13b --check-hardware
 # Run the complete pipeline
 python finetune_pipeline.py \
     --model codellama-13b \
-    --data your_training_data.yaml \
+    --data example_training_data.yaml \
     --output-dir ./outputs \
     --max-steps 100 \
     --hf-token your_huggingface_token
@@ -190,11 +197,36 @@ Each model has optimized configurations in the `configs/` directory:
 
 ## Troubleshooting
 
-### Common Issues
+### Docker Issues
 
-1. **CUDA Out of Memory**: Reduce batch size or use gradient accumulation
-2. **Model Download Fails**: Check Hugging Face token and internet connection
-3. **Training Crashes**: Verify hardware requirements and reduce model parallelism
+1. **Permission Denied Error (like `[Errno 13] Permission denied: 'outputs'`)**:
+   ```bash
+   # Fix permissions automatically
+   ./fix_permissions.sh
+
+   # Or run container with proper user permissions
+   docker run --gpus all --shm-size=8g \
+     --ulimit memlock=-1 --rm -it \
+     --user $(id -u):$(id -g) \
+     -v "$(pwd):/workspace" -w /workspace \
+     nvcr.io/nvidia/nemo:25.04.01.llama_nemotron_nano_vl bash
+   ```
+
+2. **Empty Workspace in Container**:
+   ```bash
+   # Make sure you're in the project directory
+   cd /path/to/fine-tune-demo
+   ls -la  # Should show finetune_pipeline.py
+
+   # Use the provided scripts
+   ./docker_start.sh
+   ```
+
+### Training Issues
+
+3. **CUDA Out of Memory**: Reduce batch size or use gradient accumulation
+4. **Model Download Fails**: Check Hugging Face token and internet connection
+5. **Training Crashes**: Verify hardware requirements and reduce model parallelism
 
 ### Performance Optimization
 

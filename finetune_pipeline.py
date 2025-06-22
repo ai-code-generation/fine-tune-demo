@@ -34,7 +34,15 @@ class NeMoFineTuningPipeline:
     def __init__(self, model_name: str, output_dir: str = "./outputs"):
         self.model_name = model_name
         self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(exist_ok=True)
+
+        # Create output directory with proper error handling
+        try:
+            self.output_dir.mkdir(exist_ok=True, parents=True)
+        except PermissionError:
+            logger.error(f"Permission denied creating directory: {self.output_dir}")
+            logger.error("Try running with proper permissions or use a different output directory")
+            logger.error("If using Docker, make sure to run with --user $(id -u):$(id -g)")
+            raise
         
         # Get model configuration
         self.model_config = get_model_config(model_name)
@@ -44,9 +52,15 @@ class NeMoFineTuningPipeline:
         self.models_dir = self.output_dir / "models"
         self.data_dir = self.output_dir / "data"
         self.experiments_dir = self.output_dir / "experiments"
-        
+
+        # Create subdirectories with proper error handling
         for dir_path in [self.models_dir, self.data_dir, self.experiments_dir]:
-            dir_path.mkdir(exist_ok=True)
+            try:
+                dir_path.mkdir(exist_ok=True, parents=True)
+            except PermissionError:
+                logger.error(f"Permission denied creating directory: {dir_path}")
+                logger.error("Make sure you have write permissions to the output directory")
+                raise
     
     def download_model(self, hf_token: Optional[str] = None) -> str:
         """Download the base model from Hugging Face."""
