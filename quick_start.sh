@@ -41,6 +41,8 @@ check_environment() {
     else
         print_warning "Not running in NeMo container. Make sure NeMo Framework is installed."
         print_warning "You can start the container with: ./docker_start.sh"
+        print_info "Or use Docker Compose: docker-compose up nemo-finetuning"
+        print_info "For conversion issues, run: python check_nemo_scripts.py"
     fi
     
     # Check for GPU
