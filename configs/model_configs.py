@@ -170,15 +170,15 @@ def get_recommended_config(model_name: str) -> Dict[str, Any]:
 def get_training_config_template(model_name: str) -> str:
     """Get the appropriate training configuration template for the model."""
     if "codellama" in model_name.lower():
-        return "configs/codellama_13b_nemo24_config.yaml"
+        return "configs/codellama_13b_config.yaml"
     elif "llama3" in model_name.lower():
         if "8b" in model_name.lower():
-            return "configs/llama3_8b_nemo24_config.yaml"
+            return "configs/llama3_8b_config.yaml"
         elif "70b" in model_name.lower():
-            return "configs/llama3_70b_nemo24_config.yaml"
+            return "configs/llama3_70b_config.yaml"
 
     # Default fallback
-    return "configs/llama3_8b_nemo24_config.yaml"
+    return "configs/llama3_8b_config.yaml"
 
 # NeMo 24.07 specific settings
 NEMO_24_07_SETTINGS = {

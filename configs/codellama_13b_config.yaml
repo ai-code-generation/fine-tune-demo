@@ -1,4 +1,4 @@
-name: llama3_8b_lora_nemo24
+name: codellama_13b_lora
 
 trainer:
   devices: 4
@@ -21,11 +21,11 @@ trainer:
 exp_manager:
   explicit_log_dir: null
   exp_dir: null
-  name: llama3_8b_lora_nemo24
+  name: codellama_13b_lora
   create_wandb_logger: False
   wandb_logger_kwargs:
-    project: nemo24_llama3_lora
-    name: llama3_8b_lora
+    project: nemo24_codellama_lora
+    name: codellama_13b_lora
   resume_if_exists: True
   resume_ignore_no_checkpoint: True
   create_checkpoint_callback: True
@@ -35,7 +35,7 @@ exp_manager:
     mode: "min"
     always_save_nemo: False
     save_nemo_on_train_end: True
-    filename: "llama3-8b-lora--{val_loss:.2f}-{step}-{consumed_samples}"
+    filename: "codellama-13b-lora--{val_loss:.2f}-{step}-{consumed_samples}"
     model_parallel_size: ${multiply:${model.tensor_model_parallel_size}, ${model.pipeline_model_parallel_size}}
 
 model:
@@ -49,12 +49,12 @@ model:
 
   # model architecture
   encoder_seq_length: 4096
-  max_position_embeddings: 8192
-  num_layers: 32
-  hidden_size: 4096
-  ffn_hidden_size: 14336
-  num_attention_heads: 32
-  num_query_groups: 8
+  max_position_embeddings: 16384
+  num_layers: 40
+  hidden_size: 5120
+  ffn_hidden_size: 13824
+  num_attention_heads: 40
+  num_query_groups: 40
   init_method_std: 0.01
   use_scaled_init_method: True
   hidden_dropout: 0.0
@@ -87,7 +87,7 @@ model:
 
   tokenizer:
     library: 'huggingface'
-    type: 'meta-llama/Meta-Llama-3-8B'
+    type: 'meta-llama/CodeLlama-13b-hf'
     use_fast: True
 
   # NeMo 24.07 optimizations
@@ -102,7 +102,7 @@ model:
   sequence_parallel: False
 
   # Activation Checkpointing
-  activations_checkpoint_granularity: null
+  activations_checkpoint_granularity: selective
   activations_checkpoint_method: null
   activations_checkpoint_num_layers: null
   num_micro_batches_with_partial_activation_checkpoints: null
@@ -194,8 +194,8 @@ model:
   data:
     train_ds:
       file_names: null
-      global_batch_size: 16
-      micro_batch_size: 2
+      global_batch_size: 8
+      micro_batch_size: 1
       shuffle: True
       num_workers: 0
       pin_memory: True
@@ -213,8 +213,8 @@ model:
 
     validation_ds:
       file_names: null
-      global_batch_size: 16
-      micro_batch_size: 2
+      global_batch_size: 8
+      micro_batch_size: 1
       shuffle: False
       num_workers: 0
       pin_memory: True

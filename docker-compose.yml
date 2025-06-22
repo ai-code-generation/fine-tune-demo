@@ -15,7 +15,7 @@ services:
               capabilities: [gpu]
     
     # User configuration for proper permissions
-    user: "${UID:-1000}:${GID:-1000}"
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
 
     # Environment variables
     environment:
@@ -62,18 +62,11 @@ services:
         echo 'NeMo 24.07 Fine-tuning Environment Ready';
         echo 'Supported: CodeLlama-13B, Llama3-8B/70B';
         echo 'Host mount: /static-data/team_08/simple-nemo/fine-tune-demo';
-        echo 'Run: python finetune_pipeline.py --help';
-        /bin/bash
-      "
-    
-    # Command to run
-    command: >
-      bash -c "
-        echo 'NeMo Fine-tuning Pipeline Container Started';
-        echo 'Creating necessary directories...';
         echo 'Available models:';
         python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo 'Model configs not loaded yet';
-        echo 'Starting Jupyter Lab...';
+        echo 'Quick start: ./quick_start.sh';
+        echo 'Pipeline: python finetune_pipeline.py --help';
+        /bin/bash
       "
 
 # Optional: Networks configuration

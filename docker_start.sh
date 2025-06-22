@@ -168,8 +168,18 @@ use_docker_compose() {
         print_warning "No .env file found"
         print_info "Creating .env file template..."
         echo "HF_TOKEN=your_huggingface_token_here" > .env
+        echo "USER_ID=$(id -u)" >> .env
+        echo "GROUP_ID=$(id -g)" >> .env
         print_info "Please edit .env file and add your HuggingFace token"
         return 1
+    fi
+
+    # Add user ID and group ID to .env if not present
+    if ! grep -q "USER_ID=" .env; then
+        echo "USER_ID=$(id -u)" >> .env
+    fi
+    if ! grep -q "GROUP_ID=" .env; then
+        echo "GROUP_ID=$(id -g)" >> .env
     fi
     
     print_info "Starting with docker-compose..."

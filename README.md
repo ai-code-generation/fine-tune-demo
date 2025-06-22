@@ -30,13 +30,15 @@
 fine-tune-demo/
 ├── finetune_pipeline.py           # Main NeMo 24.07 pipeline
 ├── configs/
-│   ├── model_configs_nemo24.py    # Model configurations
-│   ├── codellama_13b_nemo24_config.yaml
-│   ├── llama3_8b_nemo24_config.yaml
-│   └── llama3_70b_nemo24_config.yaml
-├── docker-compose.yml             # Updated for NeMo 24.07
+│   ├── model_configs.py           # Model configurations
+│   ├── codellama_13b_config.yaml  # CodeLlama-13B config
+│   ├── llama3_8b_config.yaml      # Llama3-8B config
+│   └── llama3_70b_config.yaml     # Llama3-70B config
+├── docker-compose.yml             # Docker Compose with --user support
 ├── docker_start.sh                # Docker startup script
+├── simple_docker_run.sh           # Simple Docker run with --user
 ├── quick_start.sh                 # Interactive setup
+├── DOCKER_GUIDE.md               # Step-by-step Docker guide
 ├── data_preprocessing.py           # YAML data processing
 ├── setup_hf_auth.py               # HuggingFace authentication
 ├── example_training_data.yaml     # Example training data
@@ -143,20 +145,34 @@ docker-compose up nemo-finetuning
 docker exec -it nemo-finetuning-24.07 /bin/bash
 ```
 
-### **Option 2: Direct Docker Run**
+### **Option 2: Simple Docker Run (with --user flag)**
 
 ```bash
-# Use the provided script
+# Use the simple script (includes --user flag automatically)
+./simple_docker_run.sh
+
+# Or use the advanced script
 ./docker_start.sh
 
-# Or manual docker run
-docker run -it --gpus all --shm-size=16g \
+# Or manual docker run with --user flag
+docker run -it --rm \
+  --user $(id -u):$(id -g) \
+  --gpus all --shm-size=16g \
   -v /static-data/team_08/simple-nemo/fine-tune-demo:/workspace \
   -e HF_TOKEN=your_token \
   nvcr.io/nvidia/nemo:24.07 /bin/bash
 ```
 
 ## ⚙️ **Configuration**
+
+### **Configuration Files**
+
+The pipeline uses these optimized configuration files:
+
+- **`configs/codellama_13b_config.yaml`** - CodeLlama-13B optimized settings
+- **`configs/llama3_8b_config.yaml`** - Llama3-8B optimized settings
+- **`configs/llama3_70b_config.yaml`** - Llama3-70B optimized settings (FP8, sequence parallelism)
+- **`configs/model_configs.py`** - Model definitions and hardware requirements
 
 ### **Model-Specific Optimizations**
 
@@ -265,12 +281,41 @@ model:
 - **Llama3-8B**: ~15GB per GPU (with optimizations)
 - **Llama3-70B**: ~75GB per GPU (with optimizations)
 
+## 🚀 **Quick Reference**
+
+### **Simple 3-Step Setup**
+
+```bash
+# 1. Navigate and setup
+cd /static-data/team_08/simple-nemo/fine-tune-demo
+echo "HF_TOKEN=your_token_here" > .env
+
+# 2. Start container (with --user flag)
+./simple_docker_run.sh
+
+# 3. Inside container - run training
+./quick_start.sh
+```
+
+### **Direct Training Commands**
+
+```bash
+# Check hardware requirements
+python finetune_pipeline.py --model codellama-13b --check-hardware
+
+# Train CodeLlama-13B
+python finetune_pipeline.py --model codellama-13b --data example_training_data.yaml --max-steps 100
+
+# Train Llama3-8B
+python finetune_pipeline.py --model llama3-8b --data example_training_data.yaml --max-steps 100
+```
+
 ## 🎉 **Getting Started**
 
 1. **Set up your environment**: Ensure Docker and NVIDIA support
 2. **Get HuggingFace access**: Request access to gated models
 3. **Prepare your data**: Format in YAML conversation structure
-4. **Run the pipeline**: Use `quick_start_nemo24.sh` for guided setup
+4. **Run the pipeline**: Use `simple_docker_run.sh` or `quick_start.sh` for guided setup
 5. **Monitor training**: Check logs in `./outputs/logs/`
 6. **Evaluate results**: Test your fine-tuned model
 

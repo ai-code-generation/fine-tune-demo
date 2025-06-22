@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 
 # Import our configurations
-from configs.model_configs_nemo24 import (
+from configs.model_configs import (
     get_model_config,
     get_hardware_requirements,
     list_available_models,
