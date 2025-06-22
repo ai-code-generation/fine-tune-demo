@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  nemo-finetuning:
+    image: nvcr.io/nvidia/nemo:24.01
+    container_name: nemo-finetuning-pipeline
+    
+    # GPU configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Environment variables
+    environment:
+      - CUDA_VISIBLE_DEVICES=all
+      - NCCL_DEBUG=INFO
+      - PYTHONPATH=/workspace
+    
+    # Volume mounts
+    volumes:
+      - .:/workspace
+      - ./outputs:/results
+      - ./data:/data
+      - ./models:/models
+    
+    # Working directory
+    working_dir: /workspace
+    
+    # Shared memory and limits
+    shm_size: 8g
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    
+    # Network configuration
+    network_mode: host
+    
+    # Keep container running
+    tty: true
+    stdin_open: true
+    
+    # Command to run
+    command: >
+      bash -c "
+        echo 'NeMo Fine-tuning Pipeline Container Started';
+        echo 'Available models:';
+        python -c 'from configs.model_configs import list_available_models; print(list_available_models())';
+        echo 'Starting Jupyter Lab...';
+      "
+
+# Optional: Networks configuration
+networks:
+  default:
+    driver: bridge
+
+# Optional: Volumes for persistent storage
+volumes:
+  nemo_cache:
+    driver: local
+  huggingface_cache:
+    driver: local

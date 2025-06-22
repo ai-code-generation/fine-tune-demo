@@ -1,0 +1,39 @@
+# Core dependencies for NeMo fine-tuning pipeline
+# Note: This assumes you're using the NeMo Framework container
+# For local installation, additional dependencies may be required
+
+# Data processing
+PyYAML>=6.0
+pandas>=1.5.0
+numpy>=1.21.0
+
+# Hugging Face integration
+transformers>=4.30.0
+tokenizers>=0.13.0
+datasets>=2.10.0
+huggingface-hub>=0.15.0
+
+# Machine Learning
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# NeMo Framework (install via container or from source)
+# nemo-toolkit[all]>=1.20.0
+
+# Utilities
+tqdm>=4.64.0
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+wandb>=0.15.0  # Optional: for experiment tracking
+
+# Development and testing
+pytest>=7.0.0
+black>=22.0.0
+flake8>=5.0.0
+mypy>=1.0.0
+
+# Optional: for advanced features
+# apex  # NVIDIA Apex for mixed precision training
+# flash-attn>=2.0.0  # Flash Attention for memory efficiency
+# triton>=2.0.0  # Triton for optimized kernels

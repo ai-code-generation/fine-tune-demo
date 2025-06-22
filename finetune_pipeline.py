@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""
+Fine-tuning pipeline for CodeLlama and Llama3 models using NeMo Framework.
+This script handles the complete pipeline from data preprocessing to model training and merging.
+"""
+
+import os
+import sys
+import argparse
+import subprocess
+import logging
+import yaml
+import shutil
+from pathlib import Path
+from typing import Optional, Dict, Any
+
+# Import our custom modules
+from configs.model_configs import (
+    get_model_config, 
+    get_hardware_requirements, 
+    list_available_models,
+    validate_hardware
+)
+from data_preprocessing import convert_yaml_to_jsonl
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+class NeMoFineTuningPipeline:
+    """Main pipeline class for fine-tuning with NeMo Framework."""
+    
+    def __init__(self, model_name: str, output_dir: str = "./outputs"):
+        self.model_name = model_name
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+        
+        # Get model configuration
+        self.model_config = get_model_config(model_name)
+        self.hardware_req = get_hardware_requirements(model_name)
+        
+        # Set up paths
+        self.models_dir = self.output_dir / "models"
+        self.data_dir = self.output_dir / "data"
+        self.experiments_dir = self.output_dir / "experiments"
+        
+        for dir_path in [self.models_dir, self.data_dir, self.experiments_dir]:
+            dir_path.mkdir(exist_ok=True)
+    
+    def download_model(self, hf_token: Optional[str] = None) -> str:
+        """Download the base model from Hugging Face."""
+        hf_model_name = self.model_config["hf_model_name"]
+        model_dir = self.models_dir / f"{self.model_name}_hf"
+        
+        logger.info(f"Downloading model {hf_model_name} to {model_dir}")
+        
+        # Set up HF token if provided
+        env = os.environ.copy()
+        if hf_token:
+            env["HF_TOKEN"] = hf_token
+        
+        # Download using git clone
+        cmd = [
+            "git", "clone", 
+            f"https://huggingface.co/{hf_model_name}",
+            str(model_dir)
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True, env=env)
+            logger.info(f"Successfully downloaded model to {model_dir}")
+            return str(model_dir)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to download model: {e}")
+            raise
+    
+    def convert_to_nemo(self, hf_model_path: str) -> str:
+        """Convert HuggingFace model to NeMo format."""
+        nemo_model_path = self.models_dir / f"{self.model_name}_base.nemo"
+        
+        logger.info(f"Converting {hf_model_path} to NeMo format: {nemo_model_path}")
+        
+        # Determine the conversion script based on model type
+        if "codellama" in self.model_name.lower():
+            convert_script = "/opt/NeMo/scripts/nlp_language_modeling/convert_hf_llama_to_nemo.py"
+        elif "llama" in self.model_name.lower():
+            convert_script = "/opt/NeMo/scripts/nlp_language_modeling/convert_hf_llama_to_nemo.py"
+        else:
+            raise ValueError(f"Unsupported model type: {self.model_name}")
+        
+        cmd = [
+            "python", convert_script,
+            "--in-file", hf_model_path,
+            "--out-file", str(nemo_model_path)
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            logger.info(f"Successfully converted model to {nemo_model_path}")
+            return str(nemo_model_path)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to convert model: {e}")
+            raise
+    
+    def prepare_data(self, yaml_data_path: str, validation_split: float = 0.1) -> tuple:
+        """Prepare training data from YAML format."""
+        logger.info(f"Preparing data from {yaml_data_path}")
+        
+        output_base = self.data_dir / f"{self.model_name}_training_data"
+        train_file, val_file = convert_yaml_to_jsonl(
+            yaml_data_path, 
+            str(output_base), 
+            validation_split
+        )
+        
+        return train_file, val_file
+    
+    def create_config_file(self, train_file: str, val_file: str, nemo_model_path: str) -> str:
+        """Create the training configuration file."""
+        config_template_path = f"configs/{self.model_name.replace('-', '_')}_lora_config.yaml"
+        
+        if not os.path.exists(config_template_path):
+            # Use a generic template based on model family
+            if "codellama" in self.model_name:
+                config_template_path = "configs/codellama_13b_lora_config.yaml"
+            else:
+                config_template_path = "configs/llama3_8b_lora_config.yaml"
+        
+        # Load template config
+        with open(config_template_path, 'r') as f:
+            config = yaml.safe_load(f)
+        
+        # Update paths and model-specific settings
+        config['model']['restore_from_path'] = nemo_model_path
+        config['model']['data']['train_ds']['file_names'] = [train_file]
+        config['model']['data']['validation_ds']['file_names'] = [val_file]
+        
+        # Update model architecture from our config
+        for key, value in self.model_config.items():
+            if key in ['num_layers', 'hidden_size', 'ffn_hidden_size', 'num_attention_heads', 
+                      'num_query_groups', 'max_position_embeddings']:
+                config['model'][key] = value
+            elif key == 'tensor_model_parallel_size':
+                config['model']['tensor_model_parallel_size'] = value
+            elif key == 'pipeline_model_parallel_size':
+                config['model']['pipeline_model_parallel_size'] = value
+            elif key == 'devices':
+                config['trainer']['devices'] = value
+            elif key == 'num_nodes':
+                config['trainer']['num_nodes'] = value
+            elif key == 'micro_batch_size':
+                config['model']['micro_batch_size'] = value
+            elif key == 'global_batch_size':
+                config['model']['global_batch_size'] = value
+            elif key == 'adapter_dim':
+                config['model']['peft']['lora_tuning']['adapter_dim'] = value
+            elif key == 'learning_rate':
+                config['model']['optim']['lr'] = value
+        
+        # Update tokenizer
+        config['model']['tokenizer']['type'] = self.model_config['hf_model_name']
+        
+        # Save updated config
+        config_file = self.experiments_dir / f"{self.model_name}_training_config.yaml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+        
+        logger.info(f"Created training config: {config_file}")
+        return str(config_file)
+    
+    def run_training(self, config_file: str, max_steps: int = 100) -> str:
+        """Run the LoRA fine-tuning."""
+        logger.info(f"Starting LoRA fine-tuning with config: {config_file}")
+        
+        # Update max_steps in config if specified
+        with open(config_file, 'r') as f:
+            config = yaml.safe_load(f)
+        config['trainer']['max_steps'] = max_steps
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+        
+        # Determine number of processes
+        num_gpus = self.model_config['devices']
+        
+        cmd = [
+            "torchrun", f"--nproc_per_node={num_gpus}",
+            "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_peft_tuning.py",
+            f"--config-path={os.path.dirname(config_file)}",
+            f"--config-name={os.path.basename(config_file)}"
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True, cwd=str(self.experiments_dir))
+            logger.info("Training completed successfully")
+            
+            # Find the trained adapter model
+            adapter_path = self.find_adapter_model()
+            return adapter_path
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Training failed: {e}")
+            raise
+    
+    def find_adapter_model(self) -> str:
+        """Find the trained adapter model."""
+        # Look for the adapter model in the experiments directory
+        for root, dirs, files in os.walk(self.experiments_dir):
+            for file in files:
+                if file.endswith('.nemo') and 'peft' in file.lower():
+                    return os.path.join(root, file)
+        
+        raise FileNotFoundError("Could not find trained adapter model")
+    
+    def merge_weights(self, base_model_path: str, adapter_path: str) -> str:
+        """Merge base model with LoRA adapter weights."""
+        merged_model_path = self.models_dir / f"{self.model_name}_merged.nemo"
+        
+        logger.info(f"Merging weights: {base_model_path} + {adapter_path} -> {merged_model_path}")
+        
+        cmd = [
+            "python", "/opt/NeMo/scripts/nlp_language_modeling/merge_lora_weights/merge.py",
+            "trainer.accelerator=gpu",
+            f"tensor_model_parallel_size={self.model_config['tensor_model_parallel_size']}",
+            f"pipeline_model_parallel_size={self.model_config['pipeline_model_parallel_size']}",
+            f"gpt_model_file={base_model_path}",
+            f"lora_model_path={adapter_path}",
+            f"merged_model_path={merged_model_path}"
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            logger.info(f"Successfully merged weights to {merged_model_path}")
+            return str(merged_model_path)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Weight merging failed: {e}")
+            raise
+
+    def run_full_pipeline(self, yaml_data_path: str, max_steps: int = 100,
+                         hf_token: Optional[str] = None, validation_split: float = 0.1) -> str:
+        """Run the complete fine-tuning pipeline."""
+        logger.info(f"Starting full fine-tuning pipeline for {self.model_name}")
+
+        try:
+            # Step 1: Download model
+            hf_model_path = self.download_model(hf_token)
+
+            # Step 2: Convert to NeMo format
+            nemo_model_path = self.convert_to_nemo(hf_model_path)
+
+            # Step 3: Prepare data
+            train_file, val_file = self.prepare_data(yaml_data_path, validation_split)
+
+            # Step 4: Create config
+            config_file = self.create_config_file(train_file, val_file, nemo_model_path)
+
+            # Step 5: Run training
+            adapter_path = self.run_training(config_file, max_steps)
+
+            # Step 6: Merge weights
+            merged_model_path = self.merge_weights(nemo_model_path, adapter_path)
+
+            logger.info(f"Pipeline completed successfully! Final model: {merged_model_path}")
+            return merged_model_path
+
+        except Exception as e:
+            logger.error(f"Pipeline failed: {e}")
+            raise
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Fine-tune CodeLlama/Llama3 models with NeMo Framework")
+    parser.add_argument("--model", "-m", required=True, choices=list_available_models(),
+                       help="Model to fine-tune")
+    parser.add_argument("--data", "-d", required=True, help="Path to YAML training data")
+    parser.add_argument("--output-dir", "-o", default="./outputs", help="Output directory")
+    parser.add_argument("--max-steps", type=int, default=100, help="Maximum training steps")
+    parser.add_argument("--hf-token", help="Hugging Face access token")
+    parser.add_argument("--validation-split", type=float, default=0.1,
+                       help="Fraction of data for validation")
+    parser.add_argument("--check-hardware", action="store_true",
+                       help="Check hardware requirements and exit")
+
+    args = parser.parse_args()
+
+    # Check hardware requirements if requested
+    if args.check_hardware:
+        requirements = get_hardware_requirements(args.model)
+        print(f"Hardware requirements for {args.model}:")
+        print(f"  Minimum GPUs: {requirements['min_gpus']}")
+        print(f"  Minimum GPU memory: {requirements['min_gpu_memory_gb']}GB per GPU")
+        print(f"  Recommended GPUs: {requirements['recommended_gpus']}")
+        print(f"  Recommended GPU memory: {requirements['recommended_gpu_memory_gb']}GB per GPU")
+        return 0
+
+    # Validate input data file
+    if not os.path.exists(args.data):
+        logger.error(f"Data file {args.data} does not exist")
+        return 1
+
+    try:
+        # Initialize pipeline
+        pipeline = NeMoFineTuningPipeline(args.model, args.output_dir)
+
+        # Run the complete pipeline
+        final_model = pipeline.run_full_pipeline(
+            args.data,
+            args.max_steps,
+            args.hf_token,
+            args.validation_split
+        )
+
+        print(f"Fine-tuning completed successfully!")
+        print(f"Final model saved to: {final_model}")
+        return 0
+
+    except Exception as e:
+        logger.error(f"Pipeline failed: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    exit(main())
