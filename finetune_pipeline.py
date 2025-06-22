@@ -66,28 +66,83 @@ class NeMoFineTuningPipeline:
         """Download the base model from Hugging Face."""
         hf_model_name = self.model_config["hf_model_name"]
         model_dir = self.models_dir / f"{self.model_name}_hf"
-        
+
         logger.info(f"Downloading model {hf_model_name} to {model_dir}")
-        
-        # Set up HF token if provided
+
+        if not hf_token:
+            logger.error("Hugging Face token is required for model download")
+            logger.error("Get a token from: https://huggingface.co/settings/tokens")
+            logger.error("Then provide it with --hf-token argument")
+            raise ValueError("Hugging Face token is required")
+
+        # Set up HF token in environment
         env = os.environ.copy()
-        if hf_token:
-            env["HF_TOKEN"] = hf_token
-        
-        # Download using git clone
+        env["HF_TOKEN"] = hf_token
+
+        # Use git clone with token authentication
+        # Format: https://username:token@huggingface.co/repo
+        authenticated_url = f"https://oauth:{hf_token}@huggingface.co/{hf_model_name}"
+
         cmd = [
-            "git", "clone", 
-            f"https://huggingface.co/{hf_model_name}",
+            "git", "clone",
+            authenticated_url,
             str(model_dir)
         ]
-        
+
         try:
-            subprocess.run(cmd, check=True, env=env)
+            # Run git clone with token authentication
+            logger.info("Downloading model with Hugging Face token authentication...")
+            subprocess.run(cmd, check=True, env=env, capture_output=True, text=True)
             logger.info(f"Successfully downloaded model to {model_dir}")
             return str(model_dir)
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to download model: {e}")
-            raise
+            logger.error(f"Failed to download model with git clone: {e}")
+            logger.warning("Git clone failed, trying alternative download method...")
+
+            # Try alternative method using huggingface_hub
+            try:
+                return self._download_model_with_hub(hf_model_name, model_dir, hf_token)
+            except Exception as hub_error:
+                logger.error(f"Alternative download method also failed: {hub_error}")
+                logger.error("Please check your Hugging Face token:")
+                logger.error("1. Make sure the token is valid and not expired")
+                logger.error("2. Ensure the token has 'read' permissions")
+                logger.error("3. For gated models, make sure you have access")
+                logger.error("4. Get a new token from: https://huggingface.co/settings/tokens")
+                raise
+
+    def _download_model_with_hub(self, hf_model_name: str, model_dir: Path, hf_token: str) -> str:
+        """Alternative download method using huggingface_hub library."""
+        try:
+            from huggingface_hub import snapshot_download
+            logger.info("Using huggingface_hub library for download...")
+
+            # Download the model using huggingface_hub
+            snapshot_download(
+                repo_id=hf_model_name,
+                local_dir=str(model_dir),
+                token=hf_token,
+                local_dir_use_symlinks=False
+            )
+
+            logger.info(f"Successfully downloaded model using huggingface_hub to {model_dir}")
+            return str(model_dir)
+
+        except ImportError:
+            logger.error("huggingface_hub library not found. Installing...")
+            subprocess.run([sys.executable, "-m", "pip", "install", "huggingface_hub"], check=True)
+
+            # Try again after installation
+            from huggingface_hub import snapshot_download
+            snapshot_download(
+                repo_id=hf_model_name,
+                local_dir=str(model_dir),
+                token=hf_token,
+                local_dir_use_symlinks=False
+            )
+
+            logger.info(f"Successfully downloaded model using huggingface_hub to {model_dir}")
+            return str(model_dir)
     
     def convert_to_nemo(self, hf_model_path: str) -> str:
         """Convert HuggingFace model to NeMo format."""
