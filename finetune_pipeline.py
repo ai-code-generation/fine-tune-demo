@@ -84,6 +84,15 @@ class NeMo24FineTuningPipeline:
         os.environ["TORCH_HOME"] = f"{workspace_cache}/torch"
         os.environ["XDG_CACHE_HOME"] = workspace_cache
 
+        # Fix matplotlib cache directory issues
+        os.environ["MPLCONFIGDIR"] = f"{workspace_cache}/matplotlib"
+        matplotlib_cache = os.path.join(workspace_cache, "matplotlib")
+        try:
+            os.makedirs(matplotlib_cache, exist_ok=True)
+            os.chmod(matplotlib_cache, 0o755)
+        except (OSError, PermissionError):
+            pass
+
         # Also try to create user cache directories as fallback
         try:
             user_cache = os.path.expanduser("~/.cache")
@@ -421,25 +430,37 @@ class NeMo24FineTuningPipeline:
         if not training_script:
             raise FileNotFoundError("NeMo training script not found. Check your NeMo 24.07 installation.")
 
-        # Build training command
+        # Build training command with absolute paths
         num_gpus = self.model_config['devices']
+        config_dir = os.path.abspath(os.path.dirname(config_file))
+        config_name = os.path.basename(config_file).replace('.yaml', '')
+
         if num_gpus > 1:
             cmd = [
                 "torchrun", f"--nproc_per_node={num_gpus}",
                 training_script,
-                f"--config-path={os.path.dirname(config_file)}",
-                f"--config-name={os.path.basename(config_file).replace('.yaml', '')}"
+                f"--config-path={config_dir}",
+                f"--config-name={config_name}"
             ]
         else:
             cmd = [
                 "python", training_script,
-                f"--config-path={os.path.dirname(config_file)}",
-                f"--config-name={os.path.basename(config_file).replace('.yaml', '')}"
+                f"--config-path={config_dir}",
+                f"--config-name={config_name}"
             ]
 
         try:
             logger.info(f"Running training command: {' '.join(cmd)}")
-            subprocess.run(cmd, check=True, cwd=str(self.experiments_dir))
+            logger.info(f"Config directory: {config_dir}")
+            logger.info(f"Config name: {config_name}")
+            logger.info(f"Working directory: {os.getcwd()}")
+
+            # Set environment variable for better error reporting
+            env = os.environ.copy()
+            env["HYDRA_FULL_ERROR"] = "1"
+
+            # Run from the workspace root directory, not experiments directory
+            subprocess.run(cmd, check=True, cwd=os.getcwd(), env=env)
             logger.info("Training completed successfully")
 
             # Find the trained adapter model
