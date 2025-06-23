@@ -12,6 +12,7 @@ import random
 import argparse
 import subprocess
 import re
+import glob
 
 def clean_text_for_json(text: str) -> str:
     """Clean text content to ensure valid JSON serialization."""
@@ -188,25 +189,31 @@ def prepare_data(yaml_file: str):
     train_data = jsonl_data[:split_idx]
     val_data = jsonl_data[split_idx:]
     
-    # Write train file with proper JSON encoding
+    # Write train file with proper JSON encoding and Unix line endings
     train_file = "train.jsonl"
-    with open(train_file, 'w', encoding='utf-8') as f:
+    with open(train_file, 'w', encoding='utf-8', newline='\n') as f:
         for item in train_data:
             try:
+                # Ensure consistent JSON formatting
                 json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                # Validate the JSON can be parsed back
+                json.loads(json_line)
                 f.write(json_line + '\n')
-            except (UnicodeEncodeError, TypeError) as e:
+            except (UnicodeEncodeError, TypeError, json.JSONDecodeError) as e:
                 print(f"⚠️  Skipping invalid training item: {e}")
                 continue
 
-    # Write validation file with proper JSON encoding
+    # Write validation file with proper JSON encoding and Unix line endings
     val_file = "validation.jsonl"
-    with open(val_file, 'w', encoding='utf-8') as f:
+    with open(val_file, 'w', encoding='utf-8', newline='\n') as f:
         for item in val_data:
             try:
+                # Ensure consistent JSON formatting
                 json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                # Validate the JSON can be parsed back
+                json.loads(json_line)
                 f.write(json_line + '\n')
-            except (UnicodeEncodeError, TypeError) as e:
+            except (UnicodeEncodeError, TypeError, json.JSONDecodeError) as e:
                 print(f"⚠️  Skipping invalid validation item: {e}")
                 continue
     
@@ -240,6 +247,25 @@ def validate_jsonl_file(file_path: str) -> bool:
     except Exception as e:
         print(f"❌ Error reading {file_path}: {e}")
         return False
+
+def cleanup_nemo_index_files():
+    """Clean up any existing NeMo index files that might be corrupted."""
+    print("🧹 Cleaning up existing NeMo index files...")
+
+    # Find and remove .idx files
+    import glob
+    idx_files = glob.glob("*.jsonl.idx.*")
+
+    if idx_files:
+        for idx_file in idx_files:
+            try:
+                os.remove(idx_file)
+                print(f"   Removed: {idx_file}")
+            except Exception as e:
+                print(f"   Failed to remove {idx_file}: {e}")
+        print(f"✅ Cleaned up {len(idx_files)} index files")
+    else:
+        print("   No index files found to clean up")
 
 def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: int = 50):
     """Run NeMo fine-tuning optimized for CodeLlama-7B."""
@@ -357,10 +383,13 @@ def main():
     # Step 2: Convert to .nemo
     nemo_path = convert_to_nemo(hf_path, args.model)
     
-    # Step 3: Prepare data
+    # Step 3: Clean up any existing corrupted index files
+    cleanup_nemo_index_files()
+
+    # Step 4: Prepare data
     train_file, val_file = prepare_data(args.data)
     
-    # Step 4: Run fine-tuning
+    # Step 5: Run fine-tuning
     trained_model = run_finetuning(nemo_path, train_file, val_file, args.max_steps)
     
     print("🎉 Fine-tuning pipeline completed!")
