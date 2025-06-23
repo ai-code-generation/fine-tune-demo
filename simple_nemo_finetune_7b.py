@@ -12,7 +12,6 @@ import random
 import argparse
 import subprocess
 import re
-import glob
 
 def clean_text_for_json(text: str) -> str:
     """Clean text content to ensure valid JSON serialization."""

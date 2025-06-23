@@ -155,14 +155,20 @@ docker run -it --rm \
     echo 'Cache directories ready ✓';
     echo '';
     echo 'Available commands:';
-    echo '  ./quick_start.sh                    # Interactive setup';
-    echo '  python finetune_pipeline.py --help  # Pipeline help';
+    echo '  python simple_nemo_finetune_7b.py --help   # CodeLlama-7B help';
+    echo '  python simple_nemo_finetune.py --help      # CodeLlama-13B help';
+    echo '  python debug_jsonl_files.py                # Debug JSONL files';
     echo '';
     echo 'Available models:';
-    python -c 'from configs.model_configs import list_available_models; print(list_available_models())' 2>/dev/null || echo '  Run: python -c \"from configs.model_configs import list_available_models; print(list_available_models())\"';
+    echo '  - CodeLlama-7B:  2 GPUs, 16GB+ VRAM each (Resource Efficient)';
+    echo '  - CodeLlama-13B: 4 GPUs, 24GB+ VRAM each (Higher Quality)';
     echo '';
     echo 'Example training:';
-    echo '  python finetune_pipeline.py --model codellama-13b --data example_training_data.yaml --max-steps 100';
+    echo '  # For CodeLlama-7B (Resource Efficient):';
+    echo '  python simple_nemo_finetune_7b.py --data example_training_data.yaml --hf-token \$HF_TOKEN';
+    echo '';
+    echo '  # For CodeLlama-13B (Higher Quality):';
+    echo '  python simple_nemo_finetune.py --data example_training_data.yaml --hf-token \$HF_TOKEN';
     echo '';
     echo 'Starting interactive shell...';
     /bin/bash

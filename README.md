@@ -1,35 +1,396 @@
-# NeMo 24.07 Fine-tuning Pipeline
+# 🎯 Simple NeMo Fine-tuning for CodeLlama
 
-**Refactored project optimized for NeMo 24.07 with focus on CodeLlama-13B and Llama3 models (8B-70B)**
+A streamlined, production-ready pipeline for fine-tuning CodeLlama models using NVIDIA NeMo 24.07 framework.
 
-## 🚀 **Key Features**
+## 🚀 **Two Optimized Options**
 
-- ✅ **NeMo 24.07 Optimized**: Latest NeMo framework with performance improvements
-- ✅ **CodeLlama & Llama3 Support**: Specialized for CodeLlama-13B and Llama3-8B/70B models
-- ✅ **Docker Integration**: Seamless container deployment with proper volume mounting
-- ✅ **YAML Training Data**: Support for multi-document YAML conversation format
-- ✅ **LoRA Fine-tuning**: Efficient parameter-efficient fine-tuning
-- ✅ **Hardware Optimization**: Configurations tuned for different GPU setups
-- ✅ **Automated Pipeline**: End-to-end training with minimal manual intervention
+### **🔥 CodeLlama-7B (Resource Efficient)**
+- **Requirements**: 2 GPUs with 16GB+ VRAM each
+- **Use case**: Limited resources, experimentation, faster training
+- **Quality**: Good for most code generation tasks
+- **Script**: `simple_nemo_finetune_7b.py`
 
-## 📋 **Requirements**
+### **⭐ CodeLlama-13B (Higher Quality)**
+- **Requirements**: 4 GPUs with 24GB+ VRAM each
+- **Use case**: Production deployment, maximum quality
+- **Quality**: Best for complex code generation tasks
+- **Script**: `simple_nemo_finetune.py`
 
-### **Hardware**
-- **CodeLlama-13B**: 4+ GPUs, 24GB+ VRAM per GPU
-- **Llama3-8B**: 4+ GPUs, 16GB+ VRAM per GPU  
-- **Llama3-70B**: 16+ GPUs, 80GB+ VRAM per GPU
+## 📋 **Prerequisites**
 
-### **Software**
-- Docker with NVIDIA GPU support
-- Host path: `/static-data/team_08/simple-nemo/fine-tune-demo`
-- HuggingFace account with access to gated models
+- Docker with GPU support
+- NVIDIA drivers and nvidia-docker2
+- HuggingFace account with access to CodeLlama models
+- GPU requirements (see options above)
 
-## 🏗️ **Project Structure**
+## 📁 **Project Structure**
 
 ```
-fine-tune-demo/
-├── finetune_pipeline.py           # Main NeMo 24.07 pipeline
-├── configs/
+simple-nemo-finetune/
+├── 📄 README.md                           # This comprehensive guide
+├── 📄 simple_nemo_finetune_7b.py         # CodeLlama-7B script (2 GPUs)
+├── 📄 simple_nemo_finetune.py            # CodeLlama-13B script (4 GPUs)
+├── 📄 debug_jsonl_files.py               # JSONL debugging tool
+├── 📄 simple_docker_run.sh               # Container runner
+├── 📄 requirements.txt                   # Python dependencies
+├── 📄 example_training_data.yaml         # Sample training data
+└── 📄 LICENSE                           # License file
+```
+
+## 🎯 **Quick Start Guide**
+
+### **Step 1: Get HuggingFace Token**
+```bash
+# Get token from: https://huggingface.co/settings/tokens
+# Request access to: https://huggingface.co/meta-llama/CodeLlama-7b-hf
+# Request access to: https://huggingface.co/meta-llama/CodeLlama-13b-hf
+export HF_TOKEN="your_token_here"
+```
+
+### **Step 2: Start NeMo Container**
+```bash
+# Simple method using provided script
+./simple_docker_run.sh
+
+# Manual method (if needed)
+docker run --gpus all \
+  --shm-size=2g \
+  --net=host \
+  --ulimit memlock=-1 \
+  --rm -it \
+  -v ${PWD}:/workspace \
+  -w /workspace \
+  -v ${PWD}/results:/results \
+  -v ${PWD}/cache:/root/.cache \
+  -e HF_HOME=/workspace/cache/huggingface \
+  -e TRANSFORMERS_CACHE=/workspace/cache/transformers \
+  -e HF_DATASETS_CACHE=/workspace/cache/datasets \
+  nvcr.io/nvidia/nemo:24.07 \
+  bash
+```
+
+### **Step 3: Choose Your Model (inside container)**
+
+#### **For CodeLlama-7B (Resource Efficient)**
+```bash
+export HF_TOKEN="your_token_here"
+python simple_nemo_finetune_7b.py \
+  --data example_training_data.yaml \
+  --max-steps 50 \
+  --hf-token $HF_TOKEN
+```
+
+#### **For CodeLlama-13B (Higher Quality)**
+```bash
+export HF_TOKEN="your_token_here"
+python simple_nemo_finetune.py \
+  --data example_training_data.yaml \
+  --max-steps 50 \
+  --hf-token $HF_TOKEN
+```
+
+### **Step 4: Check Results (inside container)**
+```bash
+# List results
+ls -la /results/
+
+# Check training logs
+ls -la /results/checkpoints/
+
+# View final model
+ls -la /results/checkpoints/megatron_gpt_peft_lora_tuning.nemo
+```
+
+## 📊 **Model Comparison**
+
+| **Aspect** | **CodeLlama-7B** | **CodeLlama-13B** |
+|------------|------------------|-------------------|
+| **GPUs Required** | 2 x 16GB+ | 4 x 24GB+ |
+| **Training Speed** | ⚡ Faster | 🐌 Slower |
+| **Memory Usage** | 💚 Lower | 🔴 Higher |
+| **Model Quality** | ✅ Good | ⭐ Better |
+| **Inference Speed** | ⚡ Fast | 🐌 Slower |
+| **Deployment** | 💚 Easier | 🔴 Harder |
+
+## 🎯 **When to Use Each Model**
+
+### **Use CodeLlama-7B when:**
+- ✅ Limited GPU resources (2 GPUs available)
+- ✅ Need faster training/inference
+- ✅ Prototyping and experimentation
+- ✅ Good enough quality for your use case
+
+### **Use CodeLlama-13B when:**
+- ⭐ Maximum code generation quality needed
+- ⭐ Have sufficient GPU resources (4+ GPUs)
+- ⭐ Production deployment with quality priority
+- ⭐ Complex code generation tasks
+
+## 🔧 **Technical Configuration**
+
+### **CodeLlama-7B Settings**
+```bash
+# Optimized for smaller model, less resources
+trainer.devices=2                    # 2 GPUs instead of 4
+model.micro_batch_size=2             # Larger micro batch
+model.global_batch_size=16           # Larger global batch
+model.tensor_model_parallel_size=1   # No TP needed
+model.optim.lr=2e-5                  # Slightly higher LR
+torchrun --nproc_per_node=2          # 2 processes
+```
+
+### **CodeLlama-13B Settings**
+```bash
+# Optimized for higher quality, more resources
+trainer.devices=4                    # 4 GPUs for better performance
+model.micro_batch_size=1             # Smaller micro batch
+model.global_batch_size=8            # Smaller global batch
+model.tensor_model_parallel_size=2   # 2-way tensor parallelism
+model.optim.lr=1e-5                  # Lower LR for stability
+torchrun --nproc_per_node=4          # 4 processes
+```
+
+## 📝 **Training Data Format**
+
+Your training data should be in YAML format with multiple documents:
+
+```yaml
+---
+messages:
+  - role: system
+    content: "You are an expert assistant."
+  - role: user
+    content: "Create a function to calculate factorial."
+  - role: assistant
+    content: |
+      ```python
+      def factorial(n):
+          if n <= 1:
+              return 1
+          return n * factorial(n - 1)
+      ```
+---
+messages:
+  - role: user
+    content: "How do I handle exceptions in Python?"
+  - role: assistant
+    content: |
+      ```python
+      try:
+          result = risky_operation()
+      except ValueError as e:
+          print(f"Error: {e}")
+      except Exception as e:
+          print(f"Unexpected error: {e}")
+      finally:
+          cleanup()
+      ```
+```
+
+## 🐛 **Troubleshooting**
+
+### **Common Issues:**
+
+#### **1. CUDA/GPU Issues**
+```bash
+# Check GPU access
+nvidia-smi
+
+# If "CUDA error: no CUDA-capable device is detected":
+# - Make sure you're using --gpus all in docker run
+# - Check host GPU access: nvidia-smi (outside container)
+# - Restart Docker daemon: sudo systemctl restart docker
+```
+
+#### **2. JSON Parsing Errors**
+```bash
+# Debug JSONL files
+python debug_jsonl_files.py
+
+# This will analyze and fix:
+# - Line ending issues (CRLF vs LF)
+# - Invalid JSON formatting
+# - Character encoding problems
+```
+
+#### **3. Memory Issues**
+```bash
+# For CodeLlama-7B, reduce batch size:
+# Edit simple_nemo_finetune_7b.py:
+# model.global_batch_size=8   # instead of 16
+# model.micro_batch_size=1    # instead of 2
+
+# For CodeLlama-13B, reduce batch size:
+# Edit simple_nemo_finetune.py:
+# model.global_batch_size=4   # instead of 8
+# model.micro_batch_size=1    # keep as 1
+```
+
+#### **4. Container Issues**
+```bash
+# Clean Docker system
+docker system prune -f
+
+# Test GPU access in container
+nvidia-docker run --rm nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi
+```
+
+#### **5. Token Issues**
+```bash
+# Test HF token
+python -c "from huggingface_hub import whoami; print(whoami())"
+```
+
+### **Quick Fixes:**
+```bash
+# Clean start (remove cache/index files)
+rm -rf cache/ *.jsonl.idx.*
+
+# Reset environment
+unset HF_TOKEN
+export HF_TOKEN="your_new_token"
+
+# Check container access
+docker run --gpus all --rm nvcr.io/nvidia/nemo:24.07 nvidia-smi
+```
+
+## 📊 **Expected Output**
+
+### **Successful Training Output:**
+```
+🎯 Simple NeMo 24.07 Fine-tuning Pipeline for CodeLlama-7B
+============================================================
+✅ GPU access confirmed
+📊 Detected 2 GPU(s)
+📥 Downloading codellama-7b...
+✅ Downloaded to ./codellama-7b-hf
+🔄 Converting ./codellama-7b-hf to ./codellama-7b.nemo...
+✅ Converted to ./codellama-7b.nemo
+🧹 Cleaning up existing NeMo index files...
+✅ Cleaned up 0 index files
+📝 Preparing data from example_training_data.yaml...
+🔍 Validating generated JSONL files...
+✅ Created 45 training and 5 validation examples
+✅ JSONL files validated successfully
+🚀 Starting fine-tuning for 50 steps...
+[NeMo I] Building index files...
+[NeMo I] Loading /workspace/train.jsonl
+[NeMo I] Loading /workspace/validation.jsonl
+✅ Fine-tuning completed successfully!
+🎉 Fine-tuning pipeline completed!
+📁 Trained model: /results/checkpoints/megatron_gpt_peft_lora_tuning.nemo
+📁 Results directory: /results
+```
+
+## 🧪 **Testing Your Model**
+
+### **Run Inference Test (inside container)**
+```bash
+# For CodeLlama-7B
+python /opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_generate.py \
+  model.restore_from_path=/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo \
+  trainer.devices=2 \
+  model.tensor_model_parallel_size=1 \
+  model.pipeline_model_parallel_size=1 \
+  model.data.test_ds.file_names="[/workspace/validation.jsonl]" \
+  model.data.test_ds.names="['codellama_7b_test']" \
+  model.data.test_ds.global_batch_size=4 \
+  model.data.test_ds.micro_batch_size=2 \
+  model.data.test_ds.tokens_to_generate=50 \
+  inference.greedy=True \
+  model.data.test_ds.output_file_path_prefix=/results/codellama_7b_results \
+  model.data.test_ds.write_predictions_to_file=True
+
+# For CodeLlama-13B
+python /opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_generate.py \
+  model.restore_from_path=/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo \
+  trainer.devices=4 \
+  model.tensor_model_parallel_size=2 \
+  model.pipeline_model_parallel_size=1 \
+  model.data.test_ds.file_names="[/workspace/validation.jsonl]" \
+  model.data.test_ds.names="['codellama_test']" \
+  model.data.test_ds.global_batch_size=4 \
+  model.data.test_ds.micro_batch_size=1 \
+  model.data.test_ds.tokens_to_generate=50 \
+  inference.greedy=True \
+  model.data.test_ds.output_file_path_prefix=/results/codellama_results \
+  model.data.test_ds.write_predictions_to_file=True
+```
+
+## 🔧 **Advanced Features**
+
+### **Debug JSONL Files**
+```bash
+# Analyze and fix JSONL file issues
+python debug_jsonl_files.py
+
+# This tool will:
+# ✅ Check line endings (CRLF vs LF)
+# ✅ Validate JSON formatting
+# ✅ Detect character encoding issues
+# ✅ Fix common problems automatically
+# ✅ Create backups before fixing
+```
+
+### **Custom Training Parameters**
+```bash
+# Adjust training steps
+python simple_nemo_finetune_7b.py --max-steps 100
+
+# Use different data file
+python simple_nemo_finetune_7b.py --data my_custom_data.yaml
+
+# Specify HF token directly
+python simple_nemo_finetune_7b.py --hf-token hf_your_token_here
+```
+
+## 🎉 **Success Stories**
+
+This pipeline has been successfully tested with:
+- ✅ **S32K14 automotive microcontroller** code generation
+- ✅ **Java test automation frameworks** using SWTBot
+- ✅ **Embedded systems programming** for automotive applications
+- ✅ **Multi-language code generation** tasks
+- ✅ **Eclipse IDE automation** scripts
+
+## 📚 **Based on Official Documentation**
+
+- [NeMo 24.07 Getting Started](https://docs.nvidia.com/nemo-framework/user-guide/24.07/getting-started.html)
+- [NeMo Llama2 SFT Playbook](https://docs.nvidia.com/nemo-framework/user-guide/24.07/playbooks/llama2sft.html)
+- [NeMo GitHub Repository](https://github.com/NVIDIA/NeMo)
+- [CodeLlama Model Cards](https://huggingface.co/meta-llama)
+
+## 🔑 **Key Features**
+
+- ✅ **Simplified Scripts**: Two optimized scripts for different resource levels
+- ✅ **Robust Error Handling**: Comprehensive CUDA, JSON, and memmap error fixes
+- ✅ **Official NeMo Workflow**: Follows NeMo 24.07 documentation exactly
+- ✅ **Resource Optimization**: Configurations tuned for 7B vs 13B models
+- ✅ **Debugging Tools**: JSONL validation and fixing utilities
+- ✅ **Production Ready**: Tested, working implementations
+- ✅ **Docker Integration**: Simple container setup with proper GPU access
+- ✅ **Automatic Cleanup**: Handles corrupted index files and cache issues
+
+## 📄 **License**
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 **Contributing**
+
+1. Fork the repository
+2. Create a feature branch
+3. Test your changes with both 7B and 13B models
+4. Submit a pull request
+
+## 🙏 **Acknowledgments**
+
+- NVIDIA NeMo team for the excellent framework
+- Meta for the CodeLlama models
+- Community contributors and testers
+
+---
+
+**Ready to start fine-tuning? Choose your model size and run the appropriate script!** 🚀
 │   ├── model_configs.py           # Model configurations
 │   ├── codellama_13b_config.yaml  # CodeLlama-13B config
 │   ├── llama3_8b_config.yaml      # Llama3-8B config
