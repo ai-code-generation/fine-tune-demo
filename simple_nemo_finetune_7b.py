@@ -11,6 +11,41 @@ import yaml
 import random
 import argparse
 import subprocess
+import re
+
+def clean_text_for_json(text: str) -> str:
+    """Clean text content to ensure valid JSON serialization."""
+    if not text:
+        return ""
+
+    # Convert to string if not already
+    text = str(text)
+
+    # Remove or replace problematic characters
+    # Replace control characters except newlines and tabs
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
+
+    # Normalize whitespace but preserve structure
+    text = re.sub(r'\r\n', '\n', text)  # Normalize line endings
+    text = re.sub(r'\r', '\n', text)    # Convert remaining \r to \n
+
+    # Limit extremely long lines that might cause issues
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        if len(line) > 2000:  # Truncate very long lines
+            line = line[:2000] + "..."
+        cleaned_lines.append(line)
+
+    text = '\n'.join(cleaned_lines)
+
+    # Remove excessive whitespace
+    text = re.sub(r'\n{4,}', '\n\n\n', text)  # Max 3 consecutive newlines
+
+    # Trim whitespace
+    text = text.strip()
+
+    return text
 
 def download_model(model_name: str, hf_token: str):
     """Download model from HuggingFace."""
@@ -100,37 +135,46 @@ def convert_to_nemo(hf_path: str, model_name: str):
 def prepare_data(yaml_file: str):
     """Convert YAML training data to JSONL format and split."""
     print(f"📝 Preparing data from {yaml_file}...")
-    
+
     # Load YAML data (handle multiple documents)
     jsonl_data = []
-    with open(yaml_file, 'r') as f:
+    with open(yaml_file, 'r', encoding='utf-8') as f:
         # Load all YAML documents in the file
         documents = list(yaml.safe_load_all(f))
-    
+
     # Process each document
-    for doc in documents:
+    for doc_idx, doc in enumerate(documents):
         if doc is None:
             continue
-            
+
         # Convert to JSONL format
         messages = doc.get('messages', [])
         if len(messages) >= 2:
             # Find user and assistant messages
             user_msg = None
             assistant_msg = None
-            
+
             for msg in messages:
                 if msg.get('role') == 'user':
                     user_msg = msg.get('content', '')
                 elif msg.get('role') == 'assistant':
                     assistant_msg = msg.get('content', '')
-            
+
             if user_msg and assistant_msg:
+                # Clean and validate the content
+                user_msg = clean_text_for_json(user_msg)
+                assistant_msg = clean_text_for_json(assistant_msg)
+
+                # Skip if content is too long (NeMo has sequence length limits)
+                if len(user_msg) > 8000 or len(assistant_msg) > 8000:
+                    print(f"⚠️  Skipping document {doc_idx}: content too long")
+                    continue
+
                 jsonl_data.append({
                     'input': user_msg,
                     'output': assistant_msg
                 })
-    
+
     if not jsonl_data:
         print("❌ No valid training data found")
         print("💡 Make sure your YAML file contains 'messages' with 'user' and 'assistant' roles")
@@ -144,20 +188,58 @@ def prepare_data(yaml_file: str):
     train_data = jsonl_data[:split_idx]
     val_data = jsonl_data[split_idx:]
     
-    # Write train file
+    # Write train file with proper JSON encoding
     train_file = "train.jsonl"
-    with open(train_file, 'w') as f:
+    with open(train_file, 'w', encoding='utf-8') as f:
         for item in train_data:
-            f.write(json.dumps(item) + '\n')
-    
-    # Write validation file
+            try:
+                json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                f.write(json_line + '\n')
+            except (UnicodeEncodeError, TypeError) as e:
+                print(f"⚠️  Skipping invalid training item: {e}")
+                continue
+
+    # Write validation file with proper JSON encoding
     val_file = "validation.jsonl"
-    with open(val_file, 'w') as f:
+    with open(val_file, 'w', encoding='utf-8') as f:
         for item in val_data:
-            f.write(json.dumps(item) + '\n')
+            try:
+                json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                f.write(json_line + '\n')
+            except (UnicodeEncodeError, TypeError) as e:
+                print(f"⚠️  Skipping invalid validation item: {e}")
+                continue
     
+    # Validate the generated JSONL files
+    print("🔍 Validating generated JSONL files...")
+    train_valid = validate_jsonl_file(train_file)
+    val_valid = validate_jsonl_file(val_file)
+
+    if not train_valid or not val_valid:
+        print("❌ Generated JSONL files contain invalid JSON")
+        sys.exit(1)
+
     print(f"✅ Created {len(train_data)} training and {len(val_data)} validation examples")
+    print(f"✅ JSONL files validated successfully")
     return train_file, val_file
+
+def validate_jsonl_file(file_path: str) -> bool:
+    """Validate that a JSONL file contains valid JSON lines."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if line:  # Skip empty lines
+                    try:
+                        json.loads(line)
+                    except json.JSONDecodeError as e:
+                        print(f"❌ Invalid JSON in {file_path} line {line_num}: {e}")
+                        print(f"   Line content: {line[:100]}...")
+                        return False
+        return True
+    except Exception as e:
+        print(f"❌ Error reading {file_path}: {e}")
+        return False
 
 def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: int = 50):
     """Run NeMo fine-tuning optimized for CodeLlama-7B."""
@@ -185,7 +267,7 @@ def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: i
         "model.megatron_amp_O2=True",
         "model.sequence_parallel=False",
         "model.activations_checkpoint_granularity=selective",
-        "model.optim.name=distributed_fused_adam",
+        "model.optim.name=fused_adam",
         "model.optim.lr=2e-5",  # Slightly higher LR for smaller model
         "model.answer_only_loss=True",
         "model.peft.peft_scheme=lora",

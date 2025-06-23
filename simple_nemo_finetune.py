@@ -11,7 +11,42 @@ import yaml
 import random
 import argparse
 import subprocess
+import re
 from pathlib import Path
+
+def clean_text_for_json(text: str) -> str:
+    """Clean text content to ensure valid JSON serialization."""
+    if not text:
+        return ""
+
+    # Convert to string if not already
+    text = str(text)
+
+    # Remove or replace problematic characters
+    # Replace control characters except newlines and tabs
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', text)
+
+    # Normalize whitespace but preserve structure
+    text = re.sub(r'\r\n', '\n', text)  # Normalize line endings
+    text = re.sub(r'\r', '\n', text)    # Convert remaining \r to \n
+
+    # Limit extremely long lines that might cause issues
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        if len(line) > 2000:  # Truncate very long lines
+            line = line[:2000] + "..."
+        cleaned_lines.append(line)
+
+    text = '\n'.join(cleaned_lines)
+
+    # Remove excessive whitespace
+    text = re.sub(r'\n{4,}', '\n\n\n', text)  # Max 3 consecutive newlines
+
+    # Trim whitespace
+    text = text.strip()
+
+    return text
 
 def download_model(model_name: str, hf_token: str):
     """Download model from HuggingFace."""
@@ -104,12 +139,12 @@ def prepare_data(yaml_file: str):
 
     # Load YAML data (handle multiple documents)
     jsonl_data = []
-    with open(yaml_file, 'r') as f:
+    with open(yaml_file, 'r', encoding='utf-8') as f:
         # Load all YAML documents in the file
         documents = list(yaml.safe_load_all(f))
 
     # Process each document
-    for doc in documents:
+    for doc_idx, doc in enumerate(documents):
         if doc is None:
             continue
 
@@ -127,6 +162,15 @@ def prepare_data(yaml_file: str):
                     assistant_msg = msg.get('content', '')
 
             if user_msg and assistant_msg:
+                # Clean and validate the content
+                user_msg = clean_text_for_json(user_msg)
+                assistant_msg = clean_text_for_json(assistant_msg)
+
+                # Skip if content is too long (NeMo has sequence length limits)
+                if len(user_msg) > 8000 or len(assistant_msg) > 8000:
+                    print(f"⚠️  Skipping document {doc_idx}: content too long")
+                    continue
+
                 jsonl_data.append({
                     'input': user_msg,
                     'output': assistant_msg
