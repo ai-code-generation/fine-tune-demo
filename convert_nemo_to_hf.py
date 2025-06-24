@@ -21,7 +21,7 @@ def check_nemo_environment():
         return False
     
     # Check for conversion script
-    converter_script = "/opt/NeMo/scripts/checkpoint_converters/convert_nemo_to_hf.py"
+    converter_script = "/opt/NeMo/scripts/checkpoint_converters/convert_llama_nemo_to_hf.py"
     if not os.path.exists(converter_script):
         print(f"❌ Converter script not found: {converter_script}")
         print("💡 Trying alternative conversion method...")
@@ -54,13 +54,13 @@ def find_nemo_model(results_dir="/results"):
     print(f"✅ Found model: {nemo_files[0]}")
     return nemo_files[0]
 
-def convert_nemo_to_hf_official(nemo_model_path, output_dir, base_model_path=None):
+def convert_llama_nemo_to_hf_official(nemo_model_path, output_dir, base_model_path=None):
     """Convert using official NeMo converter."""
     print(f"🔄 Converting {nemo_model_path} to HuggingFace format...")
     
     # Prepare conversion command
     cmd = [
-        "python", "/opt/NeMo/scripts/checkpoint_converters/convert_nemo_to_hf.py",
+        "python", "/opt/NeMo/scripts/checkpoint_converters/convert_llama_nemo_to_hf.py",
         f"--input_name_or_path={nemo_model_path}",
         f"--output_path={output_dir}",
         "--precision=bf16"
@@ -80,7 +80,7 @@ def convert_nemo_to_hf_official(nemo_model_path, output_dir, base_model_path=Non
         print(f"stderr: {e.stderr}")
         return False
 
-def convert_nemo_to_hf_alternative(nemo_model_path, output_dir, original_hf_model):
+def convert_llama_nemo_to_hf_alternative(nemo_model_path, output_dir, original_hf_model):
     """Alternative conversion method using NeMo's model loading."""
     print(f"🔄 Using alternative conversion method...")
     
@@ -225,7 +225,7 @@ def main():
     # Try official conversion first
     success = False
     if env_check is True:
-        success = convert_nemo_to_hf_official(
+        success = convert_llama_nemo_to_hf_official(
             nemo_model_path, 
             output_dir, 
             args.base_model_path
@@ -234,7 +234,7 @@ def main():
     # Try alternative method if official fails
     if not success:
         print("🔄 Trying alternative conversion method...")
-        success = convert_nemo_to_hf_alternative(
+        success = convert_llama_nemo_to_hf_alternative(
             nemo_model_path,
             output_dir,
             args.base_model

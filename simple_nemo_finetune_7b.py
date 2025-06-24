@@ -308,7 +308,7 @@ def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: i
         "model.data.train_ds.num_workers=0",
         "model.data.validation_ds.num_workers=0",
         "exp_manager.create_wandb_logger=False",
-        "exp_manager.explicit_log_dir=/results",
+        "exp_manager.explicit_log_dir=/workspace/results",
         "exp_manager.resume_if_exists=True",
         "exp_manager.resume_ignore_no_checkpoint=True",
         "exp_manager.create_checkpoint_callback=True",
@@ -318,7 +318,7 @@ def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: i
     try:
         subprocess.run(cmd, check=True)
         print("✅ Fine-tuning completed successfully!")
-        return "/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo"
+        return "/workspace/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo"
     except subprocess.CalledProcessError as e:
         print(f"❌ Fine-tuning failed: {e}")
         sys.exit(1)
@@ -393,7 +393,7 @@ def main():
     
     print("🎉 Fine-tuning pipeline completed!")
     print(f"📁 Trained model: {trained_model}")
-    print(f"📁 Results directory: /results")
+    print(f"📁 Results directory: /workspace/results")
 
 if __name__ == "__main__":
     main()
