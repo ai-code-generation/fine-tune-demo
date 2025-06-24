@@ -47,7 +47,16 @@ simple-nemo-finetune/
 export HF_TOKEN="your_token_here"
 ```
 
-### **Step 2: Start NeMo Container**
+### **Step 2: Fix File Permissions (if needed)**
+```bash
+# If you get permission denied errors after cloning:
+./fix_permissions.sh
+
+# Or manually:
+chmod 755 *.py *.sh
+```
+
+### **Step 3: Start NeMo Container**
 ```bash
 # Simple method using provided script
 ./simple_docker_run.sh
@@ -69,7 +78,7 @@ docker run --gpus all \
   bash
 ```
 
-### **Step 3: Choose Your Model (inside container)**
+### **Step 4: Choose Your Model (inside container)**
 
 #### **For CodeLlama-7B (Resource Efficient)**
 ```bash
@@ -89,7 +98,7 @@ python simple_nemo_finetune.py \
   --hf-token $HF_TOKEN
 ```
 
-### **Step 4: Check Results (inside container)**
+### **Step 5: Check Results (inside container)**
 ```bash
 # List results
 ls -la /results/
@@ -226,7 +235,20 @@ python debug_jsonl_files.py
 # model.micro_batch_size=1    # keep as 1
 ```
 
-#### **4. Container Issues**
+#### **4. Permission Issues**
+```bash
+# If you get "Permission denied" when running scripts:
+./fix_permissions.sh
+
+# Or manually fix permissions:
+chmod 755 *.py *.sh
+chmod 644 *.md *.yaml *.txt LICENSE
+
+# Check current permissions:
+ls -la *.py *.sh
+```
+
+#### **5. Container Issues**
 ```bash
 # Clean Docker system
 docker system prune -f
@@ -235,7 +257,7 @@ docker system prune -f
 nvidia-docker run --rm nvidia/cuda:11.8-base-ubuntu20.04 nvidia-smi
 ```
 
-#### **5. Token Issues**
+#### **6. Token Issues**
 ```bash
 # Test HF token
 python -c "from huggingface_hub import whoami; print(whoami())"
