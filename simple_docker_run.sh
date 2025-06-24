@@ -64,9 +64,8 @@ print_step "2. Setting up environment..."
 if [ ! -f ".env" ]; then
     print_info "Creating .env file..."
     cat > .env << EOF
-HF_TOKEN=your_huggingface_token_here
-USER_ID=$(id -u)
-GROUP_ID=$(id -g)
+USER_ID=hackathon
+GROUP_ID=hackathon
 EOF
     print_warning "Please edit .env file and add your HuggingFace token"
     print_info "Get token from: https://huggingface.co/settings/tokens"
@@ -84,9 +83,9 @@ fi
 print_info "✓ Environment configured"
 
 # Step 3: Pull image
-print_step "3. Pulling NeMo 24.07 image..."
-docker pull "$IMAGE"
-print_info "✓ Image pulled successfully"
+# print_step "3. Pulling NeMo 24.07 image..."
+# docker pull "$IMAGE"
+# print_info "✓ Image pulled successfully"
 
 # Step 4: Create directories
 print_step "4. Creating output directories..."
@@ -101,7 +100,7 @@ print_info "Container configuration:"
 print_info "  Image: $IMAGE"
 print_info "  Host path: $HOST_PATH"
 print_info "  Container path: $CONTAINER_PATH"
-print_info "  User: $(id -u):$(id -g)"
+print_info "  User: hackathon:hackathon"
 print_info "  GPUs: all"
 
 # Stop existing container if running
@@ -121,7 +120,7 @@ print_info "Starting new container..."
 
 docker run -it --rm \
   --name "$CONTAINER_NAME" \
-  --user "$(id -u):$(id -g)" \
+  --user "hackathon:hackathon" \
   --gpus all \
   --shm-size=16g \
   --ulimit memlock=-1 \
@@ -131,15 +130,15 @@ docker run -it --rm \
   -v "$HOST_PATH/.cache:$CONTAINER_PATH/.cache" \
   -e HF_TOKEN="$HF_TOKEN" \
   -e CUDA_VISIBLE_DEVICES=all \
+  -e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
   -e PYTHONPATH="$CONTAINER_PATH" \
+  -e HYDRA_FULL_ERROR=1 \
   -e TRANSFORMERS_CACHE="$CONTAINER_PATH/.cache/transformers" \
   -e HF_HOME="$CONTAINER_PATH/.cache/huggingface" \
   -e HF_DATASETS_CACHE="$CONTAINER_PATH/.cache/datasets" \
   -e TORCH_HOME="$CONTAINER_PATH/.cache/torch" \
   -e XDG_CACHE_HOME="$CONTAINER_PATH/.cache" \
   -w "$CONTAINER_PATH" \
-  -p 8888:8888 \
-  -p 6006:6006 \
   "$IMAGE" \
   bash -c "
     echo '🚀 NeMo 24.07 Fine-tuning Environment Ready!';
@@ -174,4 +173,3 @@ docker run -it --rm \
     /bin/bash
   "
 
-print_info "Container exited. Goodbye!"
