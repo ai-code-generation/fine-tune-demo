@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple NeMo 24.07 Fine-tuning Script for CodeLlama-13B
+Simple NeMo 24.07 Fine-tuning Script
+Supports CodeLlama-7B, CodeLlama-13B, Llama3-8B, and Llama3-70B
 Based on official NeMo documentation and best practices.
 """
 
@@ -51,11 +52,33 @@ def download_model(model_name: str, hf_token: str):
     """Download model from HuggingFace."""
     print(f"📥 Downloading {model_name}...")
 
-    if model_name == "codellama-13b":
-        repo_id = "meta-llama/CodeLlama-13b-hf"
-        local_dir = "./codellama-13b-hf"
-    else:
-        raise ValueError(f"Unsupported model: {model_name}")
+    # Model configurations
+    model_configs = {
+        "codellama-7b": {
+            "repo_id": "meta-llama/CodeLlama-7b-hf",
+            "local_dir": "./codellama-7b-hf"
+        },
+        "codellama-13b": {
+            "repo_id": "meta-llama/CodeLlama-13b-hf",
+            "local_dir": "./codellama-13b-hf"
+        },
+        "llama3-8b": {
+            "repo_id": "meta-llama/Meta-Llama-3-8B",
+            "local_dir": "./llama3-8b"
+        },
+        "llama3-70b": {
+            "repo_id": "meta-llama/Meta-Llama-3-70B",
+            "local_dir": "./llama3-70b"
+        }
+    }
+
+    if model_name not in model_configs:
+        available_models = ", ".join(model_configs.keys())
+        raise ValueError(f"Unsupported model: {model_name}. Available: {available_models}")
+
+    config = model_configs[model_name]
+    repo_id = config["repo_id"]
+    local_dir = config["local_dir"]
 
     # Check if already downloaded
     if os.path.exists(local_dir):
@@ -91,12 +114,12 @@ def download_model(model_name: str, hf_token: str):
 def convert_to_nemo(hf_path: str, model_name: str):
     """Convert HuggingFace model to .nemo format."""
     nemo_path = f"./{model_name}.nemo"
-    
+
     # Check if already converted
     if os.path.exists(nemo_path):
         print(f"✅ NeMo model already exists at {nemo_path}")
         return nemo_path
-    
+
     print(f"🔄 Converting {hf_path} to {nemo_path}...")
 
     # Check GPU availability
@@ -112,8 +135,25 @@ def convert_to_nemo(hf_path: str, model_name: str):
     env["CUDA_VISIBLE_DEVICES"] = "0"  # Use first GPU
     env["CUDA_LAUNCH_BLOCKING"] = "1"  # For better error reporting
 
+    # Try multiple possible script paths
+    possible_scripts = [
+        "/opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py",
+        "/opt/NeMo/scripts/nlp_language_modeling/convert_hf_llama_to_nemo.py",
+        "/opt/NeMo/examples/nlp/language_modeling/convert_hf_llama_to_nemo.py"
+    ]
+
+    converter_script = None
+    for script in possible_scripts:
+        if os.path.exists(script):
+            converter_script = script
+            break
+
+    if not converter_script:
+        print(f"❌ Conversion script not found. Checked: {possible_scripts}")
+        sys.exit(1)
+
     cmd = [
-        "python", "/opt/NeMo/scripts/checkpoint_converters/convert_llama_hf_to_nemo.py",
+        "python", converter_script,
         f"--input_name_or_path={hf_path}",
         f"--output_path={nemo_path}",
         "--precision=bf16"  # Add precision to avoid some config issues
@@ -188,48 +228,165 @@ def prepare_data(yaml_file: str):
     train_data = jsonl_data[:split_idx]
     val_data = jsonl_data[split_idx:]
     
-    # Write train file
+    # Write train file with proper JSON encoding and Unix line endings
     train_file = "train.jsonl"
-    with open(train_file, 'w') as f:
+    with open(train_file, 'w', encoding='utf-8', newline='\n') as f:
         for item in train_data:
-            f.write(json.dumps(item) + '\n')
-    
-    # Write validation file
+            try:
+                # Ensure consistent JSON formatting
+                json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                # Validate the JSON can be parsed back
+                json.loads(json_line)
+                f.write(json_line + '\n')
+            except (UnicodeEncodeError, TypeError, json.JSONDecodeError) as e:
+                print(f"⚠️  Skipping invalid training item: {e}")
+                continue
+
+    # Write validation file with proper JSON encoding and Unix line endings
     val_file = "validation.jsonl"
-    with open(val_file, 'w') as f:
+    with open(val_file, 'w', encoding='utf-8', newline='\n') as f:
         for item in val_data:
-            f.write(json.dumps(item) + '\n')
-    
+            try:
+                # Ensure consistent JSON formatting
+                json_line = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+                # Validate the JSON can be parsed back
+                json.loads(json_line)
+                f.write(json_line + '\n')
+            except (UnicodeEncodeError, TypeError, json.JSONDecodeError) as e:
+                print(f"⚠️  Skipping invalid validation item: {e}")
+                continue
+
+    # Validate the generated JSONL files
+    print("🔍 Validating generated JSONL files...")
+    train_valid = validate_jsonl_file(train_file)
+    val_valid = validate_jsonl_file(val_file)
+
+    if not train_valid or not val_valid:
+        print("❌ Generated JSONL files contain invalid JSON")
+        sys.exit(1)
+
     print(f"✅ Created {len(train_data)} training and {len(val_data)} validation examples")
+    print(f"✅ JSONL files validated successfully")
     return train_file, val_file
 
-def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: int = 50):
-    """Run NeMo fine-tuning."""
-    print(f"🚀 Starting fine-tuning for {max_steps} steps...")
-    
+def validate_jsonl_file(file_path: str) -> bool:
+    """Validate that a JSONL file contains valid JSON lines."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if line:  # Skip empty lines
+                    try:
+                        json.loads(line)
+                    except json.JSONDecodeError as e:
+                        print(f"❌ Invalid JSON in {file_path} line {line_num}: {e}")
+                        print(f"   Line content: {line[:100]}...")
+                        return False
+        return True
+    except Exception as e:
+        print(f"❌ Error reading {file_path}: {e}")
+        return False
+
+def cleanup_nemo_index_files():
+    """Clean up any existing NeMo index files that might be corrupted."""
+    print("🧹 Cleaning up existing NeMo index files...")
+
+    # Find and remove .idx files
+    import glob
+    idx_files = glob.glob("*.jsonl.idx.*")
+
+    if idx_files:
+        for idx_file in idx_files:
+            try:
+                os.remove(idx_file)
+                print(f"   Removed: {idx_file}")
+            except Exception as e:
+                print(f"   Failed to remove {idx_file}: {e}")
+        print(f"✅ Cleaned up {len(idx_files)} index files")
+    else:
+        print("   No index files found to clean up")
+
+def get_model_config(model_name: str):
+    """Get optimized configuration for different models."""
+    configs = {
+        "codellama-7b": {
+            "devices": 2,
+            "nproc_per_node": 2,
+            "micro_batch_size": 2,
+            "global_batch_size": 16,
+            "tensor_model_parallel_size": 1,
+            "pipeline_model_parallel_size": 1,
+            "optim_name": "fused_adam",
+            "lr": 2e-5
+        },
+        "codellama-13b": {
+            "devices": 4,
+            "nproc_per_node": 4,
+            "micro_batch_size": 1,
+            "global_batch_size": 8,
+            "tensor_model_parallel_size": 2,
+            "pipeline_model_parallel_size": 1,
+            "optim_name": "distributed_fused_adam",
+            "lr": 1e-5
+        },
+        "llama3-8b": {
+            "devices": 2,
+            "nproc_per_node": 2,
+            "micro_batch_size": 2,
+            "global_batch_size": 16,
+            "tensor_model_parallel_size": 1,
+            "pipeline_model_parallel_size": 1,
+            "optim_name": "fused_adam",
+            "lr": 2e-5
+        },
+        "llama3-70b": {
+            "devices": 8,
+            "nproc_per_node": 8,
+            "micro_batch_size": 1,
+            "global_batch_size": 8,
+            "tensor_model_parallel_size": 8,
+            "pipeline_model_parallel_size": 1,
+            "optim_name": "distributed_fused_adam",
+            "lr": 5e-6
+        }
+    }
+
+    if model_name not in configs:
+        # Default to codellama-13b config
+        return configs["codellama-13b"]
+
+    return configs[model_name]
+
+def run_finetuning(nemo_model: str, train_file: str, val_file: str, model_name: str, max_steps: int = 50):
+    """Run NeMo fine-tuning with model-specific optimizations."""
+    print(f"🚀 Starting fine-tuning for {model_name} ({max_steps} steps)...")
+
+    # Get model-specific configuration
+    config = get_model_config(model_name)
+
     # Prepare paths
     model_path = os.path.abspath(nemo_model)
     train_path = os.path.abspath(train_file)
     val_path = os.path.abspath(val_file)
-    
+
     cmd = [
-        "torchrun", "--nproc_per_node=4",
+        "torchrun", f"--nproc_per_node={config['nproc_per_node']}",
         "/opt/NeMo/examples/nlp/language_modeling/tuning/megatron_gpt_finetuning.py",
         "trainer.precision=bf16",
-        "trainer.devices=4",
+        f"trainer.devices={config['devices']}",
         "trainer.num_nodes=1",
         "trainer.val_check_interval=0.1",
         f"trainer.max_steps={max_steps}",
         f"model.restore_from_path={model_path}",
-        "model.micro_batch_size=1",
-        "model.global_batch_size=8",
-        "model.tensor_model_parallel_size=2",
-        "model.pipeline_model_parallel_size=1",
+        f"model.micro_batch_size={config['micro_batch_size']}",
+        f"model.global_batch_size={config['global_batch_size']}",
+        f"model.tensor_model_parallel_size={config['tensor_model_parallel_size']}",
+        f"model.pipeline_model_parallel_size={config['pipeline_model_parallel_size']}",
         "model.megatron_amp_O2=True",
         "model.sequence_parallel=False",
         "model.activations_checkpoint_granularity=selective",
-        "model.optim.name=distributed_fused_adam",
-        "model.optim.lr=1e-5",
+        f"model.optim.name={config['optim_name']}",
+        f"model.optim.lr={config['lr']}",
         "model.answer_only_loss=True",
         "model.peft.peft_scheme=lora",
         f"model.data.train_ds.file_names=[{train_path}]",
@@ -237,24 +394,24 @@ def run_finetuning(nemo_model: str, train_file: str, val_file: str, max_steps: i
         "model.data.train_ds.concat_sampling_probabilities=[1.0]",
         "model.data.train_ds.max_seq_length=2048",
         "model.data.validation_ds.max_seq_length=2048",
-        "model.data.train_ds.micro_batch_size=1",
-        "model.data.train_ds.global_batch_size=8",
-        "model.data.validation_ds.micro_batch_size=1",
-        "model.data.validation_ds.global_batch_size=8",
+        f"model.data.train_ds.micro_batch_size={config['micro_batch_size']}",
+        f"model.data.train_ds.global_batch_size={config['global_batch_size']}",
+        f"model.data.validation_ds.micro_batch_size={config['micro_batch_size']}",
+        f"model.data.validation_ds.global_batch_size={config['global_batch_size']}",
         "model.data.train_ds.num_workers=0",
         "model.data.validation_ds.num_workers=0",
         "exp_manager.create_wandb_logger=False",
-        "exp_manager.explicit_log_dir=/results",
+        "exp_manager.explicit_log_dir=/workspace/results",
         "exp_manager.resume_if_exists=True",
         "exp_manager.resume_ignore_no_checkpoint=True",
         "exp_manager.create_checkpoint_callback=True",
         "exp_manager.checkpoint_callback_params.save_nemo_on_train_end=True"
     ]
-    
+
     try:
         subprocess.run(cmd, check=True)
         print("✅ Fine-tuning completed successfully!")
-        return "/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo"
+        return "/workspace/results/checkpoints/megatron_gpt_peft_lora_tuning.nemo"
     except subprocess.CalledProcessError as e:
         print(f"❌ Fine-tuning failed: {e}")
         sys.exit(1)
@@ -281,11 +438,13 @@ def check_gpu_access():
         return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Simple NeMo 24.07 Fine-tuning for CodeLlama-13B")
+    parser = argparse.ArgumentParser(description="Simple NeMo 24.07 Fine-tuning Script")
     parser.add_argument("--data", required=True, help="Path to YAML training data")
     parser.add_argument("--hf-token", help="HuggingFace token (or set HF_TOKEN env var)")
     parser.add_argument("--max-steps", type=int, default=50, help="Maximum training steps")
-    parser.add_argument("--model", default="codellama-13b", help="Model to fine-tune")
+    parser.add_argument("--model", default="codellama-13b",
+                       choices=["codellama-7b", "codellama-13b", "llama3-8b", "llama3-70b"],
+                       help="Model to fine-tune")
 
     args = parser.parse_args()
 
@@ -308,25 +467,37 @@ def main():
         print("❌ GPU access required for NeMo model conversion and training")
         print("💡 Make sure to run container with: docker run --gpus all ...")
         sys.exit(1)
-    
-    print("🎯 Simple NeMo 24.07 Fine-tuning Pipeline")
-    print("=" * 50)
-    
+
+    # Display model configuration
+    config = get_model_config(args.model)
+    print(f"🎯 Simple NeMo 24.07 Fine-tuning Pipeline for {args.model}")
+    print("=" * 60)
+    print(f"📊 Model Configuration:")
+    print(f"   - GPUs: {config['devices']}")
+    print(f"   - Tensor Parallel: {config['tensor_model_parallel_size']}")
+    print(f"   - Micro Batch Size: {config['micro_batch_size']}")
+    print(f"   - Global Batch Size: {config['global_batch_size']}")
+    print(f"   - Learning Rate: {config['lr']}")
+    print()
+
     # Step 1: Download model
     hf_path = download_model(args.model, hf_token)
-    
+
     # Step 2: Convert to .nemo
     nemo_path = convert_to_nemo(hf_path, args.model)
-    
-    # Step 3: Prepare data
+
+    # Step 3: Clean up any existing corrupted index files
+    cleanup_nemo_index_files()
+
+    # Step 4: Prepare data
     train_file, val_file = prepare_data(args.data)
-    
-    # Step 4: Run fine-tuning
-    trained_model = run_finetuning(nemo_path, train_file, val_file, args.max_steps)
-    
+
+    # Step 5: Run fine-tuning
+    trained_model = run_finetuning(nemo_path, train_file, val_file, args.model, args.max_steps)
+
     print("🎉 Fine-tuning pipeline completed!")
     print(f"📁 Trained model: {trained_model}")
-    print(f"📁 Results directory: /results")
+    print(f"📁 Results directory: /workspace/results")
 
 if __name__ == "__main__":
     main()
